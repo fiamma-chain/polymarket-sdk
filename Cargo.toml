@@ -1,0 +1,192 @@
+[package]
+name = "polymarket-sdk"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+description = "Rust SDK for Polymarket prediction markets - REST APIs, WebSocket streams, order signing, and Safe wallet integration"
+repository = "https://github.com/CarlWiles/polymarket-sdk"
+homepage = "https://github.com/CarlWiles/polymarket-sdk"
+documentation = "https://docs.rs/polymarket-sdk"
+readme = "README.md"
+keywords = ["polymarket", "prediction-market", "trading", "defi", "ethereum"]
+categories = ["api-bindings", "web-programming", "cryptography"]
+authors = ["CarlWiles <silverwingsdw@gmail.com>"]
+include = [
+    "src/**/*",
+    "abis/**/*",
+    "examples/**/*",
+    "Cargo.toml",
+    "LICENSE-*",
+    "README.md",
+    "CHANGELOG.md",
+]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[features]
+default = ["full"]
+full = ["client", "stream", "order", "safe"]
+
+# Core feature modules
+client = ["auth"]
+stream = []
+order = ["auth"]
+safe = ["auth"]
+
+# Base modules
+auth = [
+    "dep:alloy-primitives",
+    "dep:alloy-signer",
+    "dep:alloy-signer-local",
+    "dep:alloy-sol-types",
+    "dep:alloy-provider",
+    "dep:hmac",
+    "dep:sha2",
+    "dep:base64",
+]
+
+# Backward-compatible feature aliases (for ride-service migration)
+rtds = ["stream"]
+gamma = ["client"]
+profiles = ["client"]
+data = ["client"]
+wss = ["stream"]
+relayer = ["safe", "client", "order"]  # Legacy relayer feature includes all trading capabilities
+clob = ["client"]
+orders = ["order"]
+
+
+[dependencies]
+# === Async Runtime ===
+tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "sync", "time"] }
+futures = "0.3"
+futures-util = "0.3"
+
+# === HTTP Client ===
+reqwest = { version = "0.12", default-features = false, features = ["json", "gzip", "rustls-tls"] }
+
+# === WebSocket ===
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-native-roots"] }
+
+# === Serialization ===
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# === Types ===
+chrono = { version = "0.4", features = ["serde"] }
+rust_decimal = { version = "1.37", features = ["serde", "serde-str"] }
+
+# === Error Handling ===
+thiserror = "2"
+
+# === URL ===
+url = "2"
+urlencoding = "2"
+
+# === Crypto (auth feature) ===
+alloy-primitives = { version = "1.4", optional = true }
+alloy-signer = { version = "1.0", features = ["eip712"], optional = true }
+alloy-signer-local = { version = "1.0", features = ["eip712"], optional = true }
+alloy-sol-types = { version = "1.4", features = ["eip712-serde", "json"], optional = true }
+alloy-provider = { version = "1.0", optional = true }
+hmac = { version = "0.12", optional = true }
+sha2 = { version = "0.10", optional = true }
+base64 = { version = "0.22", optional = true }
+
+# === Rate Limiting ===
+governor = "0.10"
+
+# === Utilities ===
+hex = "0.4"
+rand = "0.9"
+
+# === Logging ===
+tracing = "0.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+wiremock = "0.6"
+pretty_assertions = "1"
+dotenvy = "0.15"
+tracing-subscriber = "0.3"
+
+[[example]]
+name = "market_discovery"
+required-features = ["client"]
+
+[[example]]
+name = "basic_trading"
+required-features = ["full"]
+
+[[example]]
+name = "websocket_stream"
+required-features = ["stream"]
+
+[[example]]
+name = "safe_wallet"
+required-features = ["safe"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+# Lint groups with lower priority so individual overrides work
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+
+# Individual lint overrides - suppress stylistic warnings for SDK
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+similar_names = "allow"
+doc_markdown = "allow"
+missing_const_for_fn = "allow"
+too_long_first_doc_paragraph = "allow"
+cast_possible_wrap = "allow"
+needless_continue = "allow"
+match_same_arms = "allow"
+derive_partial_eq_without_eq = "allow"
+derivable_impls = "allow"
+use_self = "allow"
+doc_link_with_quotes = "allow"
+significant_drop_tightening = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+redundant_pub_crate = "allow"
+uninlined_format_args = "allow"
+needless_pass_by_value = "allow"
+map_unwrap_or = "allow"
+option_if_let_else = "allow"
+format_push_string = "allow"
+unused_self = "allow"
+incompatible_msrv = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+or_fun_call = "allow"
+cast_lossless = "allow"
+cognitive_complexity = "allow"
+struct_field_names = "allow"
+items_after_statements = "allow"
+new_without_default = "allow"
+manual_string_new = "allow"
+implicit_hasher = "allow"
+trivially_copy_pass_by_ref = "allow"
+default_trait_access = "allow"
+used_underscore_binding = "allow"
+redundant_closure_for_method_calls = "allow"
+manual_let_else = "allow"
+large_enum_variant = "allow"
+unnecessary_map_or = "allow"
+needless_borrows_for_generic_args = "allow"
+iter_kv_map = "allow"
+implicit_clone = "allow"
+struct_excessive_bools = "allow"
+bool_to_int_with_if = "allow"
+unused_async = "allow"
