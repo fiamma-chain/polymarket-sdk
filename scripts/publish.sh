@@ -42,11 +42,11 @@ bump_version() {
     local old_version=$(get_version)
     sed -i '' "s/^version = \".*\"/version = \"$new_version\"/" Cargo.toml
 
-    # Update Cargo.lock
+    # Update Cargo.lock (for local builds)
     cargo check --quiet 2>/dev/null || true
 
-    # Commit version bump
-    git add Cargo.toml Cargo.lock
+    # Commit version bump (Cargo.lock is gitignored for library crates)
+    git add Cargo.toml
     git commit -m "chore: bump version to $new_version"
     success "Version bumped from $old_version to $new_version (committed)"
 }
