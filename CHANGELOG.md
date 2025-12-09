@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2025-12-09
+
+### Fixed
+
+- **OpenOrder struct** - Correct field mapping to match actual CLOB `/data/orders` API response
+- **Orders endpoint** - Use `/data/orders` endpoint for GET requests (not `/orders`)
+
+### Added
+
+- `PaginatedResponse<T>` - Generic wrapper type for paginated CLOB endpoints
+- Backward compatible accessor methods on `OpenOrder`: `token_id()`, `maker()`, `signer()`
+
+## [0.0.3] - 2025-12-08
+
+### Changed
+
+- **Config defaults** - Use URL helper functions in Default implementations for cleaner configuration
+
+## [0.0.2] - 2025-12-06
+
+### Added
+
+- Publish script for crates.io releases
+- Improved RTDS message parsing robustness with debug logging
+
+### Fixed
+
+- Clippy lints for cleaner code
+- Exclude Cargo.lock from published crate (library best practice)
+
 ## [0.0.1] - 2025-12-05
 
 ### Added
