@@ -178,33 +178,80 @@ pub struct OrderResponse {
     pub status: String,
 }
 
-/// Open order from CLOB
+/// Paginated response wrapper from CLOB /data/* endpoints
+#[derive(Debug, Deserialize)]
+pub struct PaginatedResponse<T> {
+    /// Limit used for this page
+    pub limit: Option<i32>,
+    /// Total count
+    pub count: Option<i32>,
+    /// Cursor for next page
+    pub next_cursor: String,
+    /// Data items
+    pub data: Vec<T>,
+}
+
+/// Open order from CLOB /data/orders endpoint
+/// Field names match the actual API response (TypeScript client format)
 #[derive(Debug, Deserialize)]
 pub struct OpenOrder {
     /// Order ID
     pub id: String,
-    /// Token ID
-    #[serde(rename = "tokenId")]
-    pub token_id: String,
+    /// Order status
+    pub status: String,
+    /// Owner address
+    #[serde(default)]
+    pub owner: Option<String>,
     /// Maker address
-    pub maker: String,
-    /// Signer address
-    pub signer: String,
+    pub maker_address: String,
+    /// Market slug
+    #[serde(default)]
+    pub market: Option<String>,
+    /// Asset ID (token ID)
+    pub asset_id: String,
     /// Side (BUY/SELL)
     pub side: String,
+    /// Original size
+    pub original_size: String,
+    /// Size matched
+    pub size_matched: String,
     /// Price
     pub price: String,
-    /// Original size
-    #[serde(rename = "originalSize")]
-    pub original_size: String,
-    /// Size remaining
-    #[serde(rename = "sizeMatched")]
-    pub size_matched: String,
-    /// Status
-    pub status: String,
-    /// Created at timestamp
-    #[serde(rename = "createdAt")]
-    pub created_at: Option<String>,
+    /// Associated trades
+    #[serde(default)]
+    pub associate_trades: Option<Vec<String>>,
+    /// Outcome
+    #[serde(default)]
+    pub outcome: Option<String>,
+    /// Created at timestamp (unix timestamp as number)
+    pub created_at: Option<i64>,
+    /// Expiration
+    #[serde(default)]
+    pub expiration: Option<String>,
+    /// Order type
+    #[serde(default)]
+    pub order_type: Option<String>,
+}
+
+impl OpenOrder {
+    /// Get token_id (alias for asset_id for backward compatibility)
+    #[must_use]
+    pub fn token_id(&self) -> &str {
+        &self.asset_id
+    }
+
+    /// Get maker (alias for maker_address for backward compatibility)
+    #[must_use]
+    pub fn maker(&self) -> &str {
+        &self.maker_address
+    }
+
+    /// Get signer (same as maker for CLOB orders)
+    #[must_use]
+    pub fn signer(&self) -> &str {
+        // Note: CLOB API doesn't return signer separately, it's the same as maker
+        &self.maker_address
+    }
 }
 
 /// Cancel orders request
@@ -762,7 +809,8 @@ impl ClobClient {
             PolymarketError::config("API credentials required for querying orders")
         })?;
 
-        let endpoint = "/orders";
+        // IMPORTANT: Use /data/orders endpoint for GET (not /orders which is for POST)
+        let endpoint = "/data/orders";
         let url = format!("{}{}", self.config.base_url, endpoint);
 
         let headers = create_l2_headers::<String>(&self.signer, api_creds, "GET", endpoint, None)?;
@@ -782,13 +830,14 @@ impl ClobClient {
             return Err(PolymarketError::api(status.as_u16(), body));
         }
 
-        let result: Vec<OpenOrder> = response.json().await.map_err(|e| {
+        // Parse as paginated response
+        let paginated: PaginatedResponse<OpenOrder> = response.json().await.map_err(|e| {
             PolymarketError::parse_with_source(format!("Failed to parse orders response: {e}"), e)
         })?;
 
-        debug!(count = %result.len(), "Retrieved open orders");
+        debug!(count = %paginated.data.len(), "Retrieved open orders");
 
-        Ok(result)
+        Ok(paginated.data)
     }
 
     /// Cancel orders by IDs

@@ -14,7 +14,7 @@ pub mod profiles;
 
 pub use clob::{
     ApiKeyResponse, CancelResponse, ClobClient, ClobConfig, DeriveApiKeyResponse, OpenOrder,
-    OrderResponse,
+    OrderResponse, PaginatedResponse,
 };
 pub use data::{DataClient, DataConfig};
 pub use gamma::{GammaClient, GammaConfig};

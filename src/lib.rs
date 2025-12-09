@@ -124,8 +124,8 @@ pub use auth::{
 #[cfg(feature = "client")]
 pub use client::{
     ApiKeyResponse, CancelResponse, ClobClient, ClobConfig, DataClient, DataConfig,
-    DeriveApiKeyResponse, GammaClient, GammaConfig, OpenOrder, OrderResponse, ProfilesClient,
-    ProfilesConfig,
+    DeriveApiKeyResponse, GammaClient, GammaConfig, OpenOrder, OrderResponse, PaginatedResponse,
+    ProfilesClient, ProfilesConfig,
 };
 
 // ============================================================================
