@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2025-12-10
+
+### Added
+
+- **ClobClient** - `derive_or_create_api_key()` method for automatic wallet registration handling
+  - Automatically detects "Could not derive api key" error for unregistered wallets
+  - Registers wallet via `create_api_key_with_signature()` and retries derive
+  - Simplifies first-time Privy ServerWallet integration
+- **PolymarketError** - `is_wallet_not_registered()` helper method to detect CLOB registration errors
+
 ## [0.0.4] - 2025-12-09
 
 ### Fixed

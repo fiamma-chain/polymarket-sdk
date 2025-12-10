@@ -604,6 +604,75 @@ impl ClobClient {
         Ok(result)
     }
 
+    /// Derive or create API key with pre-computed signature (for Privy ServerWallet)
+    ///
+    /// This is a convenience method that handles the common case where a wallet
+    /// may or may not have been registered with Polymarket CLOB API yet.
+    ///
+    /// # Workflow
+    ///
+    /// 1. Try to derive API key (for existing registrations)
+    /// 2. If "Could not derive api key" error (wallet not registered):
+    ///    - First call create_api_key_with_signature to register the wallet
+    ///    - Then retry derive_api_key_with_signature
+    /// 3. Return the derived credentials
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - Wallet address (hex string with or without 0x prefix)
+    /// * `signature` - EIP-712 signature (hex string with 0x prefix)
+    /// * `timestamp` - Unix timestamp string used in signature
+    /// * `nonce` - Nonce value used in signature
+    ///
+    /// # Returns
+    ///
+    /// Derived API credentials (api_key, secret, passphrase)
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use polymarket_sdk::auth::{build_clob_auth_typed_data, get_current_unix_time_secs};
+    /// use alloy_primitives::{Address, U256};
+    ///
+    /// // Prepare and sign typed data (see derive_api_key_with_signature for details)
+    /// let credentials = clob_client
+    ///     .derive_or_create_api_key(&address, &signature, &timestamp, nonce)
+    ///     .await?;
+    /// ```
+    #[instrument(skip(self, signature))]
+    pub async fn derive_or_create_api_key(
+        &self,
+        address: &str,
+        signature: &str,
+        timestamp: &str,
+        nonce: U256,
+    ) -> Result<DeriveApiKeyResponse> {
+        // Try derive first (common case: wallet already registered)
+        match self
+            .derive_api_key_with_signature(address, signature, timestamp, nonce)
+            .await
+        {
+            Ok(response) => Ok(response),
+            Err(e) if e.is_wallet_not_registered() => {
+                // Wallet not registered - register it first, then retry derive
+                info!(
+                    address = %address,
+                    "Wallet not registered with CLOB API, registering first"
+                );
+
+                // Step 1: Create/register the API key (first-time registration)
+                self.create_api_key_with_signature(address, signature, timestamp, nonce)
+                    .await?;
+
+                // Step 2: Retry derive (should succeed now)
+                info!(address = %address, "Wallet registered, retrying derive");
+                self.derive_api_key_with_signature(address, signature, timestamp, nonce)
+                    .await
+            }
+            Err(e) => Err(e),
+        }
+    }
+
     /// Create API key (step 2 of credential creation)
     ///
     /// This registers the derived API key with the CLOB.

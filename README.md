@@ -18,7 +18,7 @@ A comprehensive Rust SDK for [Polymarket](https://polymarket.com) prediction mar
 
 ```toml
 [dependencies]
-polymarket-sdk = "0.0.4"
+polymarket-sdk = "0.0.5"
 ```
 
 ### Feature Flags

@@ -198,6 +198,23 @@ impl PolymarketError {
         }
     }
 
+    /// Check if this error indicates the wallet is not registered with Polymarket CLOB.
+    ///
+    /// This happens when calling `/auth/derive-api-key` for a wallet that has never
+    /// been registered via `/auth/api-key` (create API key).
+    ///
+    /// # Returns
+    /// `true` if the error message indicates wallet not registered
+    #[must_use]
+    pub fn is_wallet_not_registered(&self) -> bool {
+        match self {
+            Self::Api { status, message, .. } => {
+                *status == 400 && message.contains("Could not derive api key")
+            }
+            _ => false,
+        }
+    }
+
     /// Check if this is a critical error that should stop trading.
     #[must_use]
     pub fn is_critical(&self) -> bool {
