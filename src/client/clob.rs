@@ -292,6 +292,71 @@ pub struct FeeRateResponse {
     pub base_fee: u32,
 }
 
+/// Order book level (price/size pair)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderBookLevel {
+    /// Price level
+    pub price: String,
+    /// Size at this price level
+    pub size: String,
+}
+
+/// Order book summary response from /book endpoint
+///
+/// This is the comprehensive response from the Polymarket CLOB `/book` endpoint
+/// that contains all market parameters including neg_risk, tick_size, and min_order_size.
+///
+/// Reference: <https://docs.polymarket.com/api-reference/orderbook/get-order-book-summary>
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrderBookSummary {
+    /// Market identifier (condition ID)
+    pub market: String,
+    /// Asset identifier (token ID)
+    pub asset_id: String,
+    /// Timestamp of the order book snapshot
+    pub timestamp: String,
+    /// Hash of the order book state
+    pub hash: String,
+    /// Array of bid levels (buy orders)
+    pub bids: Vec<OrderBookLevel>,
+    /// Array of ask levels (sell orders)
+    pub asks: Vec<OrderBookLevel>,
+    /// Minimum order size for this market
+    pub min_order_size: String,
+    /// Minimum price increment (tick size)
+    pub tick_size: String,
+    /// Whether negative risk is enabled for this market
+    pub neg_risk: bool,
+}
+
+impl OrderBookSummary {
+    /// Check if the orderbook has any liquidity (bids or asks)
+    #[must_use]
+    pub fn has_liquidity(&self) -> bool {
+        !self.bids.is_empty() || !self.asks.is_empty()
+    }
+
+    /// Get the best bid price (highest buy price)
+    #[must_use]
+    pub fn best_bid(&self) -> Option<&str> {
+        self.bids.first().map(|l| l.price.as_str())
+    }
+
+    /// Get the best ask price (lowest sell price)
+    #[must_use]
+    pub fn best_ask(&self) -> Option<&str> {
+        self.asks.first().map(|l| l.price.as_str())
+    }
+
+    /// Calculate the spread between best bid and best ask
+    #[must_use]
+    pub fn spread(&self) -> Option<f64> {
+        let bid: f64 = self.best_bid()?.parse().ok()?;
+        let ask: f64 = self.best_ask()?.parse().ok()?;
+        Some(ask - bid)
+    }
+}
+
 /// CLOB API client
 #[derive(Clone)]
 pub struct ClobClient {
@@ -987,7 +1052,94 @@ impl ClobClient {
         Ok(result)
     }
 
+    /// Get the order book summary for a token ID
+    ///
+    /// Queries the Polymarket CLOB `/book` endpoint to retrieve the complete
+    /// order book summary including market parameters like `neg_risk`, `tick_size`,
+    /// and `min_order_size`, as well as the current bid/ask levels.
+    ///
+    /// This is the recommended method to use instead of separate calls to
+    /// `get_neg_risk`, `get_tick_size`, and `check_orderbook_exists`.
+    ///
+    /// Reference: <https://docs.polymarket.com/api-reference/orderbook/get-order-book-summary>
+    ///
+    /// # Arguments
+    /// * `token_id` - The token ID (CLOB token / asset ID) to query
+    ///
+    /// # Returns
+    /// * `Ok(Some(OrderBookSummary))` - The order book exists and summary is returned
+    /// * `Ok(None)` - The order book does not exist (market closed or invalid token)
+    /// * `Err(...)` - API error occurred
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let summary = client.get_orderbook_summary(token_id).await?;
+    /// if let Some(book) = summary {
+    ///     println!("neg_risk: {}", book.neg_risk);
+    ///     println!("tick_size: {}", book.tick_size);
+    ///     println!("min_order_size: {}", book.min_order_size);
+    ///     println!("bids: {:?}", book.bids);
+    ///     println!("asks: {:?}", book.asks);
+    /// } else {
+    ///     println!("Orderbook does not exist");
+    /// }
+    /// ```
+    #[instrument(skip(self))]
+    pub async fn get_orderbook_summary(&self, token_id: &str) -> Result<Option<OrderBookSummary>> {
+        self.wait_for_rate_limit().await;
+
+        let endpoint = "/book";
+        let url = format!("{}{}?token_id={}", self.config.base_url, endpoint, token_id);
+
+        debug!(token_id = %token_id, "Fetching orderbook summary");
+
+        let response = self.client.get(&url).send().await?;
+        let status = response.status();
+
+        // Get response body
+        let body = response.text().await.unwrap_or_default();
+
+        // API returns 200 with {"error": "..."} for non-existent orderbooks
+        if body.contains("does not exist") || body.contains("No orderbook") {
+            info!(token_id = %token_id, "Orderbook does not exist");
+            return Ok(None);
+        }
+
+        // Handle 404 as orderbook not found
+        if status.as_u16() == 404 {
+            info!(token_id = %token_id, "Orderbook not found (404)");
+            return Ok(None);
+        }
+
+        if !status.is_success() {
+            return Err(PolymarketError::api(status.as_u16(), body));
+        }
+
+        // Parse the orderbook summary
+        let summary: OrderBookSummary = serde_json::from_str(&body).map_err(|e| {
+            PolymarketError::parse_with_source(
+                format!("Failed to parse orderbook summary: {e}"),
+                e,
+            )
+        })?;
+
+        debug!(
+            token_id = %token_id,
+            neg_risk = %summary.neg_risk,
+            tick_size = %summary.tick_size,
+            min_order_size = %summary.min_order_size,
+            bids_count = %summary.bids.len(),
+            asks_count = %summary.asks.len(),
+            "Got orderbook summary"
+        );
+
+        Ok(Some(summary))
+    }
+
     /// Get the neg_risk status for a token ID
+    ///
+    /// **Deprecated**: Use [`get_orderbook_summary`] instead, which returns all market
+    /// parameters in a single API call.
     ///
     /// Queries the Polymarket CLOB API to determine if a market/token uses
     /// negative risk contracts. This is crucial for signing orders with the
@@ -999,6 +1151,10 @@ impl ClobClient {
     /// # Returns
     /// * `true` if the market uses negative risk contracts (use negRiskExchange)
     /// * `false` if the market uses standard contracts (use exchange)
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use get_orderbook_summary() instead, which returns neg_risk, tick_size, and min_order_size in a single API call"
+    )]
     #[instrument(skip(self))]
     pub async fn get_neg_risk(&self, token_id: &str) -> Result<bool> {
         self.wait_for_rate_limit().await;
@@ -1027,6 +1183,9 @@ impl ClobClient {
 
     /// Get the tick size for a token ID
     ///
+    /// **Deprecated**: Use [`get_orderbook_summary`] instead, which returns all market
+    /// parameters in a single API call.
+    ///
     /// Queries the Polymarket CLOB API to get the minimum tick size for
     /// price rounding on a specific market.
     ///
@@ -1035,6 +1194,10 @@ impl ClobClient {
     ///
     /// # Returns
     /// The tick size as a string (e.g., "0.01", "0.001", "0.0001")
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use get_orderbook_summary() instead, which returns neg_risk, tick_size, and min_order_size in a single API call"
+    )]
     #[instrument(skip(self))]
     pub async fn get_tick_size(&self, token_id: &str) -> Result<String> {
         self.wait_for_rate_limit().await;
@@ -1108,6 +1271,10 @@ impl ClobClient {
 
     /// Check if an orderbook exists for a token ID
     ///
+    /// **Deprecated**: Use [`get_orderbook_summary`] instead, which returns all market
+    /// parameters in a single API call. Check for `Some(...)` vs `None` to determine
+    /// if the orderbook exists.
+    ///
     /// Queries the Polymarket CLOB `/book` endpoint to verify that an
     /// active orderbook exists for the given token. This should be called
     /// before submitting orders to avoid "orderbook does not exist" errors.
@@ -1123,6 +1290,10 @@ impl ClobClient {
     /// Markets can have valid neg_risk and fee_rate data but no active
     /// orderbook (e.g., resolved or closed markets). Always verify
     /// orderbook existence before submitting orders.
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use get_orderbook_summary() instead. Check for Some(...) vs None to determine if orderbook exists"
+    )]
     #[instrument(skip(self))]
     pub async fn check_orderbook_exists(&self, token_id: &str) -> Result<bool> {
         self.wait_for_rate_limit().await;
