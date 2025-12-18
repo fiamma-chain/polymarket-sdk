@@ -43,7 +43,7 @@ use crate::auth::{
 };
 use crate::core::clob_api_url;
 use crate::core::{PolymarketError, Result};
-use crate::types::{ApiCredentials, SignedOrderRequest};
+use crate::types::{ApiCredentials, OrderType, SignedOrderRequest};
 
 // Builder API authentication
 use crate::auth::{BuilderApiKeyCreds, BuilderSigner};
@@ -810,9 +810,37 @@ impl ClobClient {
     /// Submit an order
     ///
     /// Requires API credentials to be set via `with_api_credentials`.
+    ///
+    /// # Arguments
+    ///
+    /// * `order` - The signed order request
+    /// * `order_type` - The order type (GTC for limit orders, FOK for market orders, etc.)
+    ///
+    /// # Order Types
+    ///
+    /// - `OrderType::GTC` - Good Till Cancelled (limit order)
+    /// - `OrderType::FOK` - Fill Or Kill (market order, must fill completely or cancel)
+    /// - `OrderType::GTD` - Good Till Date
+    /// - `OrderType::FAK` - Fill And Kill (partial fills allowed, unfilled portion cancelled)
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use polymarket_sdk::types::OrderType;
+    ///
+    /// // Limit order (GTC)
+    /// client.submit_order(&signed_order, OrderType::GTC).await?;
+    ///
+    /// // Market order (FOK)
+    /// client.submit_order(&signed_order, OrderType::FOK).await?;
+    /// ```
     #[instrument(skip(self, order))]
-    pub async fn submit_order(&self, order: &SignedOrderRequest) -> Result<OrderResponse> {
-        use crate::types::{NewOrder, OrderType};
+    pub async fn submit_order(
+        &self,
+        order: &SignedOrderRequest,
+        order_type: OrderType,
+    ) -> Result<OrderResponse> {
+        use crate::types::NewOrder;
 
         self.wait_for_rate_limit().await;
 
@@ -826,8 +854,7 @@ impl ClobClient {
         // IMPORTANT: Convert SignedOrderRequest to NewOrder format
         // - Use api_key as owner (NOT wallet address) - matches TypeScript SDK behavior
         // - Wrap order data in nested structure with orderType and deferExec
-        let new_order =
-            NewOrder::from_signed_order(order, &api_creds.api_key, OrderType::GTC, false);
+        let new_order = NewOrder::from_signed_order(order, &api_creds.api_key, order_type, false);
 
         // CRITICAL FIX: Serialize JSON ONCE and reuse for all operations
         // This ensures L2 HMAC, Builder HMAC, and HTTP body all use identical JSON
