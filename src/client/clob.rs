@@ -228,8 +228,8 @@ pub struct OpenOrder {
     /// Expiration
     #[serde(default)]
     pub expiration: Option<String>,
-    /// Order type
-    #[serde(default)]
+    /// Order type (GTC, FOK, GTD, FAK)
+    #[serde(default, rename = "type")]
     pub order_type: Option<String>,
 }
 
@@ -959,6 +959,78 @@ impl ClobClient {
         );
 
         Ok(result)
+    }
+
+    /// Get a single order by its ID
+    ///
+    /// Retrieves detailed information about an existing order.
+    /// This endpoint requires L2 authentication headers.
+    ///
+    /// Reference: <https://docs.polymarket.com/developers/CLOB/orders/get-order>
+    ///
+    /// # Arguments
+    /// * `order_id` - The order hash/ID to query
+    ///
+    /// # Returns
+    /// * `Ok(Some(OpenOrder))` - Order details if found
+    /// * `Ok(None)` - Order not found
+    /// * `Err(...)` - API error
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let order = client.get_order("0xb816482a5187a3d3db49cbaf6fe3ddf24f53e6c712b5a4bf5e01d0ec7b11dabc").await?;
+    /// if let Some(order) = order {
+    ///     println!("Order status: {}", order.status);
+    ///     println!("Price: {}", order.price);
+    ///     println!("Size matched: {}", order.size_matched);
+    /// }
+    /// ```
+    #[instrument(skip(self))]
+    pub async fn get_order(&self, order_id: &str) -> Result<Option<OpenOrder>> {
+        self.wait_for_rate_limit().await;
+
+        let api_creds = self.api_credentials.as_ref().ok_or_else(|| {
+            PolymarketError::config("API credentials required for querying order")
+        })?;
+
+        let endpoint = format!("/data/order/{}", order_id);
+        let url = format!("{}{}", self.config.base_url, endpoint);
+
+        let headers = create_l2_headers::<String>(&self.signer, api_creds, "GET", &endpoint, None)?;
+
+        debug!(order_id = %order_id, "Getting order details");
+
+        let mut req_builder = self.client.get(&url);
+        for (key, value) in &headers {
+            req_builder = req_builder.header(*key, value);
+        }
+
+        let response = req_builder.send().await?;
+        let status = response.status();
+
+        // Handle 404 as order not found
+        if status.as_u16() == 404 {
+            info!(order_id = %order_id, "Order not found (404)");
+            return Ok(None);
+        }
+
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(PolymarketError::api(status.as_u16(), body));
+        }
+
+        let order: OpenOrder = response.json().await.map_err(|e| {
+            PolymarketError::parse_with_source(format!("Failed to parse order response: {e}"), e)
+        })?;
+
+        debug!(
+            order_id = %order_id,
+            status = %order.status,
+            price = %order.price,
+            "Retrieved order details"
+        );
+
+        Ok(Some(order))
     }
 
     /// Get open orders for the signer
