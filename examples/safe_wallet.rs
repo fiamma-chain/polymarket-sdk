@@ -10,9 +10,9 @@
 //!
 //! Run with: `cargo run --example safe_wallet --features safe`
 
-use polymarket_sdk::prelude::*;
-use polymarket_sdk::relayer::BuilderApiCredentials;
-use polymarket_sdk::safe::{
+use polymarket_rs_sdk::prelude::*;
+use polymarket_rs_sdk::relayer::BuilderApiCredentials;
+use polymarket_rs_sdk::safe::{
     build_safe_create_typed_data, derive_safe_address, CONDITIONAL_TOKENS_ADDRESS,
     CTF_EXCHANGE_ADDRESS, EXCHANGE_ADDRESS, NATIVE_USDC_CONTRACT_ADDRESS,
     NEG_RISK_CTF_EXCHANGE_ADDRESS, SAFE_FACTORY, SAFE_INIT_CODE_HASH, USDC_CONTRACT_ADDRESS,

@@ -12,8 +12,8 @@
 //! Run with: `cargo run --example basic_trading --features full`
 
 use alloy_signer_local::PrivateKeySigner;
-use polymarket_sdk::order::get_contract_config;
-use polymarket_sdk::prelude::*;
+use polymarket_rs_sdk::order::get_contract_config;
+use polymarket_rs_sdk::prelude::*;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 

@@ -5,7 +5,7 @@
 //!
 //! Run with: `cargo run --example market_discovery --features client`
 
-use polymarket_sdk::prelude::*;
+use polymarket_rs_sdk::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {

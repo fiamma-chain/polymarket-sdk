@@ -5,7 +5,7 @@
 //!
 //! Run with: `cargo run --example websocket_stream --features stream`
 
-use polymarket_sdk::prelude::*;
+use polymarket_rs_sdk::prelude::*;
 use std::time::Duration;
 
 #[tokio::main]

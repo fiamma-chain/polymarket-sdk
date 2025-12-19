@@ -241,7 +241,8 @@ mod manual_debug {
         // 目标 tx_id（来自当前排查）
         let tx_id = "019ad6a5-fe80-7b44-a075-2af31ea399dd";
 
-        // 用环境变量构建 relayer 客户端
+        // 用默认配置构建 relayer 客户端
+        #[allow(deprecated)]
         let cfg = RelayerConfig::from_env();
         let mut client = RelayerClient::new(cfg).expect("create relayer client");
 
@@ -2920,6 +2921,7 @@ pub fn build_safe_tx_request(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::RELAYER_API_BASE;
 
     // --- Derive Tests ---
 

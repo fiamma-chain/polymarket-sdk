@@ -1482,7 +1482,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rtds_config_builder() {
+    fn test_rtds_config_builder_with_host() {
         let config = RtdsConfig::builder()
             .with_host("wss://custom.example.com")
             .with_topic("custom_topic")

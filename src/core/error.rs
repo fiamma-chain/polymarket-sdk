@@ -208,9 +208,9 @@ impl PolymarketError {
     #[must_use]
     pub fn is_wallet_not_registered(&self) -> bool {
         match self {
-            Self::Api { status, message, .. } => {
-                *status == 400 && message.contains("Could not derive api key")
-            }
+            Self::Api {
+                status, message, ..
+            } => *status == 400 && message.contains("Could not derive api key"),
             _ => false,
         }
     }

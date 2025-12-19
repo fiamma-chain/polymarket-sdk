@@ -1216,10 +1216,7 @@ impl ClobClient {
 
         // Parse the orderbook summary
         let summary: OrderBookSummary = serde_json::from_str(&body).map_err(|e| {
-            PolymarketError::parse_with_source(
-                format!("Failed to parse orderbook summary: {e}"),
-                e,
-            )
+            PolymarketError::parse_with_source(format!("Failed to parse orderbook summary: {e}"), e)
         })?;
 
         debug!(
