@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
 
     // 2. Initialize CLOB client
     println!("\n2. Initializing CLOB client...");
-    let clob_config = ClobConfig::from_env();
+    let clob_config = ClobConfig::default();
     let clob = ClobClient::new(clob_config, signer.clone())?;
     println!("   CLOB client initialized");
 

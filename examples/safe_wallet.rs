@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
 
     // 1. Initialize the Relayer client
     println!("1. Initializing Relayer client...");
-    let mut _relayer = RelayerClient::from_env()?;
+    let mut _relayer = RelayerClient::with_defaults()?;
 
     // Load Builder API credentials for authenticated operations
     match BuilderApiCredentials::from_env() {
