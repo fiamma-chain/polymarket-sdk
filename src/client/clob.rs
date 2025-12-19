@@ -1234,7 +1234,7 @@ impl ClobClient {
 
     /// Get the neg_risk status for a token ID
     ///
-    /// **Deprecated**: Use [`get_orderbook_summary`] instead, which returns all market
+    /// **Deprecated**: Use [`Self::get_orderbook_summary`] instead, which returns all market
     /// parameters in a single API call.
     ///
     /// Queries the Polymarket CLOB API to determine if a market/token uses
@@ -1279,7 +1279,7 @@ impl ClobClient {
 
     /// Get the tick size for a token ID
     ///
-    /// **Deprecated**: Use [`get_orderbook_summary`] instead, which returns all market
+    /// **Deprecated**: Use [`Self::get_orderbook_summary`] instead, which returns all market
     /// parameters in a single API call.
     ///
     /// Queries the Polymarket CLOB API to get the minimum tick size for
@@ -1367,7 +1367,7 @@ impl ClobClient {
 
     /// Check if an orderbook exists for a token ID
     ///
-    /// **Deprecated**: Use [`get_orderbook_summary`] instead, which returns all market
+    /// **Deprecated**: Use [`Self::get_orderbook_summary`] instead, which returns all market
     /// parameters in a single API call. Check for `Some(...)` vs `None` to determine
     /// if the orderbook exists.
     ///
