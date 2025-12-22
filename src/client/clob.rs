@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info, instrument, warn};
 
 use crate::auth::{
-    create_l1_headers, create_l2_headers, create_l2_headers_with_body_string,
+    create_l1_headers, create_l2_headers_with_address, create_l2_headers_with_body_string,
     get_current_unix_time_secs,
 };
 use crate::core::clob_api_url;
@@ -455,6 +455,25 @@ impl ClobClient {
     #[must_use]
     pub fn address(&self) -> String {
         format!("{:?}", self.signer.address())
+    }
+
+    /// Get the address to use for L2 authentication.
+    ///
+    /// Uses explicit `auth_address` if set (for Builder API scenarios where the
+    /// order signer and API credentials owner are different), otherwise falls
+    /// back to the signer's address.
+    ///
+    /// This ensures consistent address handling across all L2-authenticated methods.
+    fn get_auth_address(&self) -> String {
+        if let Some(ref addr) = self.auth_address {
+            if addr.starts_with("0x") {
+                addr.clone()
+            } else {
+                format!("0x{}", addr)
+            }
+        } else {
+            format!("{:?}", self.signer.address())
+        }
     }
 
     /// Wait for rate limiter
@@ -996,7 +1015,10 @@ impl ClobClient {
         let endpoint = format!("/data/order/{}", order_id);
         let url = format!("{}{}", self.config.base_url, endpoint);
 
-        let headers = create_l2_headers::<String>(&self.signer, api_creds, "GET", &endpoint, None)?;
+        // Use auth_address for L2 authentication (supports Builder API scenarios)
+        let address = self.get_auth_address();
+        let headers =
+            create_l2_headers_with_address::<String>(&address, api_creds, "GET", &endpoint, None)?;
 
         debug!(order_id = %order_id, "Getting order details");
 
@@ -1046,7 +1068,10 @@ impl ClobClient {
         let endpoint = "/data/orders";
         let url = format!("{}{}", self.config.base_url, endpoint);
 
-        let headers = create_l2_headers::<String>(&self.signer, api_creds, "GET", endpoint, None)?;
+        // Use auth_address for L2 authentication (supports Builder API scenarios)
+        let address = self.get_auth_address();
+        let headers =
+            create_l2_headers_with_address::<String>(&address, api_creds, "GET", endpoint, None)?;
 
         debug!(address = %self.address(), "Getting open orders");
 
@@ -1086,11 +1111,24 @@ impl ClobClient {
         let url = format!("{}{}", self.config.base_url, endpoint);
 
         let body = CancelOrdersRequest { order_ids };
-        let headers = create_l2_headers(&self.signer, api_creds, "DELETE", endpoint, Some(&body))?;
+
+        // Use auth_address for L2 authentication (supports Builder API scenarios)
+        // Serialize body once to ensure consistent HMAC calculation
+        let address = self.get_auth_address();
+        let body_str = serde_json::to_string(&body)
+            .map_err(|e| PolymarketError::parse(format!("Failed to serialize: {}", e)))?;
+        let timestamp = get_current_unix_time_secs();
+        let headers = create_l2_headers_with_body_string(
+            &address, api_creds, "DELETE", endpoint, &body_str, timestamp,
+        )?;
 
         debug!("Cancelling orders");
 
-        let mut req_builder = self.client.delete(&url).json(&body);
+        let mut req_builder = self
+            .client
+            .delete(&url)
+            .header("Content-Type", "application/json")
+            .body(body_str);
         for (key, value) in &headers {
             req_builder = req_builder.header(*key, value);
         }
@@ -1124,8 +1162,10 @@ impl ClobClient {
         let endpoint = "/order/cancel-all";
         let url = format!("{}{}", self.config.base_url, endpoint);
 
+        // Use auth_address for L2 authentication (supports Builder API scenarios)
+        let address = self.get_auth_address();
         let headers =
-            create_l2_headers::<String>(&self.signer, api_creds, "DELETE", endpoint, None)?;
+            create_l2_headers_with_address::<String>(&address, api_creds, "DELETE", endpoint, None)?;
 
         debug!(address = %self.address(), "Cancelling all orders");
 
