@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-12-22
+
+### Fixed
+
+- **ClobClient** - Fix L2 authentication address handling in `get_order`, `get_open_orders`, `cancel_orders`, `cancel_all_orders` methods
+  - Add `get_auth_address()` helper method to centralize auth address logic
+  - Now correctly uses `auth_address` (set via `with_auth_address()`) instead of signer address
+  - Fixes Builder API authentication failures in these methods
+
+## [0.1.0] - 2025-12-20
+
+### Changed
+
+- Bump version to 0.1.0 for stable release
+
 ## [0.0.5] - 2025-12-10
 
 ### Added
