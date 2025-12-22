@@ -1164,8 +1164,9 @@ impl ClobClient {
 
         // Use auth_address for L2 authentication (supports Builder API scenarios)
         let address = self.get_auth_address();
-        let headers =
-            create_l2_headers_with_address::<String>(&address, api_creds, "DELETE", endpoint, None)?;
+        let headers = create_l2_headers_with_address::<String>(
+            &address, api_creds, "DELETE", endpoint, None,
+        )?;
 
         debug!(address = %self.address(), "Cancelling all orders");
 
