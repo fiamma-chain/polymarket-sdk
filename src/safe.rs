@@ -237,6 +237,7 @@ mod manual_debug {
     ///
     /// 注意：这会访问网络，仅用于本地调试，不会在 CI 运行。
     #[tokio::test]
+    #[ignore = "Manual debug test requiring network access"]
     async fn fetch_transaction_status_from_env() {
         // 目标 tx_id（来自当前排查）
         let tx_id = "019ad6a5-fe80-7b44-a075-2af31ea399dd";
