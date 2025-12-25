@@ -16,7 +16,7 @@ async fn main() -> Result<()> {
 
     // Example 1: Query multiple markets by condition IDs
     println!("1. Fetching markets by condition IDs...");
-    
+
     // These are example condition IDs - replace with actual condition IDs from Polymarket
     let condition_ids = vec![
         // You can get these from the Gamma API or market URLs
@@ -26,16 +26,22 @@ async fn main() -> Result<()> {
     if condition_ids.is_empty() {
         println!("   No condition IDs provided - demonstrating with empty list");
         let markets = client.get_markets_by_condition_ids(&[]).await?;
-        println!("   Result: {} markets (expected 0 for empty input)", markets.len());
+        println!(
+            "   Result: {} markets (expected 0 for empty input)",
+            markets.len()
+        );
     } else {
         let markets = client.get_markets_by_condition_ids(&condition_ids).await?;
         println!("   Found {} markets:", markets.len());
-        
+
         for market in &markets {
             println!("   - Condition ID: {}", market.condition_id);
-            println!("     Question: {}", market.question.as_deref().unwrap_or("Unknown"));
+            println!(
+                "     Question: {}",
+                market.question.as_deref().unwrap_or("Unknown")
+            );
             println!("     Active: {}, Closed: {}", market.active, market.closed);
-            
+
             // Show outcome prices
             let (yes_price, no_price) = market.parse_outcome_prices();
             if let Some(yes) = yes_price {
@@ -52,10 +58,10 @@ async fn main() -> Result<()> {
     // Example 2: Batch query with large number of condition IDs
     println!("\n2. Demonstrating batched query for large lists...");
     println!("   (Using batching to avoid URL length limits)");
-    
+
     // For demonstration - in real usage, you'd have actual condition IDs
     let large_condition_list: Vec<String> = vec![];
-    
+
     if large_condition_list.is_empty() {
         println!("   No condition IDs provided - skipping batched query demo");
     } else {
@@ -74,26 +80,31 @@ async fn main() -> Result<()> {
 
     // Example 4: Get a single market first, then batch query related markets
     println!("\n4. Practical workflow example...");
-    
+
     // First, get some active markets
     let params = ListParams::new().with_limit(3).with_active(true);
     let sample_markets = client.get_markets(Some(params)).await?;
-    
-    if !sample_markets.is_empty() {
+
+    if sample_markets.is_empty() {
+        println!("   No active markets found for demonstration");
+    } else {
         println!("   Found {} sample markets", sample_markets.len());
-        
+
         // Extract their condition IDs
         let condition_ids: Vec<String> = sample_markets
             .iter()
             .map(|m| m.condition_id.clone())
             .collect();
-        
+
         println!("   Condition IDs: {:?}", condition_ids);
-        
+
         // Now batch query them (in real usage, you might have these IDs from another source)
         let queried_markets = client.get_markets_by_condition_ids(&condition_ids).await?;
-        println!("   Successfully batch queried {} markets", queried_markets.len());
-        
+        println!(
+            "   Successfully batch queried {} markets",
+            queried_markets.len()
+        );
+
         for market in &queried_markets {
             println!(
                 "   - {} ({})",
@@ -101,8 +112,6 @@ async fn main() -> Result<()> {
                 market.condition_id
             );
         }
-    } else {
-        println!("   No active markets found for demonstration");
     }
 
     println!("\n=== Done! ===");
@@ -110,7 +119,6 @@ async fn main() -> Result<()> {
     println!("- Use get_markets_by_condition_ids() for up to ~50 condition IDs");
     println!("- Use get_markets_by_condition_ids_batched() for larger lists");
     println!("- Batch queries are more efficient than individual get_market() calls");
-    
+
     Ok(())
 }
-

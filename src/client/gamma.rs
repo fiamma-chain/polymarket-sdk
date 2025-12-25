@@ -187,7 +187,9 @@ impl GammaClient {
         debug!(%condition_id, "Fetching market by condition ID");
 
         // Query markets with condition_id filter
-        let markets = self.get_markets_by_condition_ids(&[condition_id.to_string()]).await?;
+        let markets = self
+            .get_markets_by_condition_ids(&[condition_id.to_string()])
+            .await?;
 
         // Return the first market if found
         Ok(markets.into_iter().next())
@@ -688,11 +690,9 @@ mod tests {
     fn test_get_markets_by_condition_ids_empty() {
         let client = GammaClient::with_defaults().unwrap();
         let rt = tokio::runtime::Runtime::new().unwrap();
-        
-        let result = rt.block_on(async {
-            client.get_markets_by_condition_ids(&[]).await
-        });
-        
+
+        let result = rt.block_on(async { client.get_markets_by_condition_ids(&[]).await });
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0);
     }
@@ -701,11 +701,13 @@ mod tests {
     fn test_get_markets_by_condition_ids_batched_empty() {
         let client = GammaClient::with_defaults().unwrap();
         let rt = tokio::runtime::Runtime::new().unwrap();
-        
+
         let result = rt.block_on(async {
-            client.get_markets_by_condition_ids_batched(&[], Some(10)).await
+            client
+                .get_markets_by_condition_ids_batched(&[], Some(10))
+                .await
         });
-        
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 0);
     }
@@ -714,12 +716,10 @@ mod tests {
     fn test_get_market_by_condition_id_empty_result() {
         let client = GammaClient::with_defaults().unwrap();
         let rt = tokio::runtime::Runtime::new().unwrap();
-        
+
         // This should not panic, just return None or empty
-        let result = rt.block_on(async {
-            client.get_market_by_condition_id("0xinvalid").await
-        });
-        
+        let result = rt.block_on(async { client.get_market_by_condition_id("0xinvalid").await });
+
         // Should succeed (either None or error is acceptable for invalid ID)
         assert!(result.is_ok() || result.is_err());
     }
