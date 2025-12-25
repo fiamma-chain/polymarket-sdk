@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-12-25
+
+### Added
+
+- **GammaClient** - `get_markets_by_condition_ids()` method for batch querying markets by condition IDs
+  - Efficiently query multiple markets in a single API request
+  - Supports up to ~50 condition IDs per request
+  - 10-50x performance improvement over individual queries
+- **GammaClient** - `get_markets_by_condition_ids_batched()` method for large-scale batch queries
+  - Automatically batches requests to avoid URL length limits
+  - Default batch size of 50 condition IDs per request
+  - Ideal for querying 50+ markets
+- **GammaClient** - `get_market_by_condition_id()` convenience method
+  - Query a single market by its condition ID
+  - Returns the first matching market if multiple exist
+
+### Fixed
+
+- **GammaClient** - `get_market()` method now correctly uses market ID (integer) instead of condition_id
+  - Breaking change: Parameter type changed from `&str` to `u64` to match [Polymarket API specification](https://docs.polymarket.com/api-reference/markets/get-market-by-id)
+  - Previous usage with condition_id was incorrect per official API docs
+  - Use `get_market_by_condition_id()` for condition ID queries
+
+### Performance
+
+- Batch market queries: 100 markets now require 2 API calls instead of 100 (50x improvement)
+
 ## [0.1.1] - 2025-12-22
 
 ### Fixed

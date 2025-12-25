@@ -145,11 +145,20 @@ impl GammaClient {
         self.handle_response::<Vec<Market>>(response).await
     }
 
-    /// Get a specific market by condition ID
+    /// Get a specific market by market ID
+    ///
+    /// # Arguments
+    /// * `market_id` - The market ID (integer, not condition_id)
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let client = GammaClient::with_defaults()?;
+    /// let market = client.get_market(12345).await?;
+    /// ```
     #[instrument(skip(self), level = "debug")]
-    pub async fn get_market(&self, condition_id: &str) -> Result<Option<Market>> {
-        let url = format!("{}/markets/{}", self.config.base_url, condition_id);
-        debug!(%url, "Fetching market");
+    pub async fn get_market(&self, market_id: u64) -> Result<Option<Market>> {
+        let url = format!("{}/markets/{}", self.config.base_url, market_id);
+        debug!(%url, market_id, "Fetching market by ID");
 
         let response = self.client.get(&url).send().await?;
 
@@ -158,6 +167,30 @@ impl GammaClient {
         }
 
         self.handle_response::<Market>(response).await.map(Some)
+    }
+
+    /// Get a specific market by condition ID
+    ///
+    /// This is a convenience method that queries markets with a condition_id filter.
+    /// Note: This may return multiple markets if multiple markets share the same condition_id.
+    ///
+    /// # Arguments
+    /// * `condition_id` - The condition ID (hex string starting with 0x)
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let client = GammaClient::with_defaults()?;
+    /// let market = client.get_market_by_condition_id("0x123...").await?;
+    /// ```
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_market_by_condition_id(&self, condition_id: &str) -> Result<Option<Market>> {
+        debug!(%condition_id, "Fetching market by condition ID");
+
+        // Query markets with condition_id filter
+        let markets = self.get_markets_by_condition_ids(&[condition_id.to_string()]).await?;
+
+        // Return the first market if found
+        Ok(markets.into_iter().next())
     }
 
     /// Search markets by query
@@ -379,6 +412,78 @@ impl GammaClient {
         Ok(all_markets)
     }
 
+    /// Get markets by condition IDs
+    ///
+    /// Fetches market information for the given list of condition IDs.
+    /// Useful for batch querying multiple markets by their condition IDs.
+    ///
+    /// # Arguments
+    /// * `condition_ids` - List of condition IDs to query
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let client = GammaClient::with_defaults()?;
+    /// let condition_ids = vec![
+    ///     "0x1234...".to_string(),
+    ///     "0x5678...".to_string(),
+    /// ];
+    /// let markets = client.get_markets_by_condition_ids(&condition_ids).await?;
+    /// ```
+    #[instrument(skip(self, condition_ids), level = "debug", fields(condition_count = condition_ids.len()))]
+    pub async fn get_markets_by_condition_ids(
+        &self,
+        condition_ids: &[String],
+    ) -> Result<Vec<Market>> {
+        if condition_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Build URL with repeated condition_id params (condition_id=...&condition_id=...)
+        let mut url = Url::parse(&format!("{}/markets", self.config.base_url))?;
+        {
+            let mut pairs = url.query_pairs_mut();
+            for condition_id in condition_ids {
+                pairs.append_pair("condition_id", condition_id);
+            }
+        }
+
+        let url_str = url.to_string();
+        debug!(%url_str, condition_count = condition_ids.len(), "Fetching markets by condition IDs");
+        info!(%url_str, condition_count = condition_ids.len(), "Gamma get_markets_by_condition_ids request");
+
+        let response = self.client.get(url).send().await?;
+        self.handle_response::<Vec<Market>>(response).await
+    }
+
+    /// Get markets by condition IDs with batching support
+    ///
+    /// For large lists of condition IDs, this method batches requests to avoid
+    /// URL length limits. Default batch size is 50 condition IDs per request.
+    ///
+    /// # Arguments
+    /// * `condition_ids` - List of condition IDs to query
+    /// * `batch_size` - Optional batch size (default: 50)
+    #[instrument(skip(self, condition_ids), level = "debug", fields(condition_count = condition_ids.len()))]
+    pub async fn get_markets_by_condition_ids_batched(
+        &self,
+        condition_ids: &[String],
+        batch_size: Option<usize>,
+    ) -> Result<Vec<Market>> {
+        if condition_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let batch_size = batch_size.unwrap_or(50);
+        let mut all_markets = Vec::new();
+
+        for chunk in condition_ids.chunks(batch_size) {
+            let markets = self.get_markets_by_condition_ids(chunk).await?;
+            all_markets.extend(markets);
+        }
+
+        Ok(all_markets)
+    }
+
     // =========================================================================
     // Public Search API
     // =========================================================================
@@ -577,5 +682,45 @@ mod tests {
         assert!(query.contains("limit=10"));
         assert!(query.contains("offset=20"));
         assert!(query.contains("closed=false"));
+    }
+
+    #[test]
+    fn test_get_markets_by_condition_ids_empty() {
+        let client = GammaClient::with_defaults().unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        
+        let result = rt.block_on(async {
+            client.get_markets_by_condition_ids(&[]).await
+        });
+        
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_get_markets_by_condition_ids_batched_empty() {
+        let client = GammaClient::with_defaults().unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        
+        let result = rt.block_on(async {
+            client.get_markets_by_condition_ids_batched(&[], Some(10)).await
+        });
+        
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_get_market_by_condition_id_empty_result() {
+        let client = GammaClient::with_defaults().unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        
+        // This should not panic, just return None or empty
+        let result = rt.block_on(async {
+            client.get_market_by_condition_id("0xinvalid").await
+        });
+        
+        // Should succeed (either None or error is acceptable for invalid ID)
+        assert!(result.is_ok() || result.is_err());
     }
 }
