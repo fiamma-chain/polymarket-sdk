@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2025-12-25
+
+### Fixed
+
+- **rustls CryptoProvider** - Fix runtime panic when using realtime WebSocket streams
+  - Explicitly specify `ring` as the crypto provider for rustls
+  - Resolves "Could not automatically determine the process-level CryptoProvider" error
+  - Affects downstream projects using `reqwest` or `tokio-tungstenite` with rustls 0.23+
+
 ## [0.1.2] - 2025-12-25
 
 ### Added
