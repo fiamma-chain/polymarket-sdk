@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
     match client.get_positions_above_size(user_address, 100.0).await {
         Ok(positions) => {
             println!("Positions with size > 100:");
-            for pos in positions.iter() {
+            for pos in &positions {
                 println!(
                     "  - {} ({}) - Size: {:.2}",
                     pos.title, pos.outcome, pos.size
@@ -124,7 +124,7 @@ async fn main() -> Result<()> {
     {
         Ok(positions) => {
             println!("Positions in specified markets:");
-            for pos in positions.iter() {
+            for pos in &positions {
                 println!(
                     "  - {} ({}) - Current: ${:.2}",
                     pos.title, pos.outcome, pos.current_value
@@ -171,7 +171,7 @@ async fn main() -> Result<()> {
     match client.get_positions_with_query(&query).await {
         Ok(positions) => {
             println!("Positions matching title 'Trump':");
-            for pos in positions.iter() {
+            for pos in &positions {
                 println!(
                     "  - {} ({}) - Current: ${:.2}",
                     pos.title, pos.outcome, pos.current_value
