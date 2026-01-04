@@ -27,7 +27,7 @@ use crate::core::{clob_api_url, data_api_url};
 use crate::core::{PolymarketError, Result};
 use crate::types::{
     BiggestWinner, BiggestWinnersQuery, ClosedPosition, DataApiActivity, DataApiPosition,
-    DataApiTrade, DataApiTrader,
+    DataApiTrade, DataApiTrader, PositionsQuery,
 };
 
 /// Data API configuration
@@ -149,14 +149,48 @@ impl DataClient {
         self.handle_response::<DataApiTrader>(response).await
     }
 
-    /// Get positions for a wallet address
+    /// Get positions for a wallet address with query parameters
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use polymarket_sdk::data::{DataClient, DataConfig};
+    /// use polymarket_sdk::types::{PositionsQuery, PositionSortBy, SortDirection};
+    ///
+    /// let client = DataClient::new(DataConfig::default())?;
+    ///
+    /// // Simple query - just user address
+    /// let positions = client.get_positions_with_query(
+    ///     &PositionsQuery::new("0x...")
+    /// ).await?;
+    ///
+    /// // Advanced query with filters
+    /// let query = PositionsQuery::new("0x...")
+    ///     .with_size_threshold(10.0)
+    ///     .redeemable_only()
+    ///     .with_limit(50)
+    ///     .sort_by(PositionSortBy::CashPnl)
+    ///     .sort_direction(SortDirection::Desc);
+    ///
+    /// let positions = client.get_positions_with_query(&query).await?;
+    /// ```
     #[instrument(skip(self), level = "debug")]
-    pub async fn get_positions(&self, address: &str) -> Result<Vec<DataApiPosition>> {
-        let url = format!("{}/positions?user={}", self.config.base_url, address);
-        debug!(%url, "Fetching positions");
+    pub async fn get_positions_with_query(&self, query: &PositionsQuery) -> Result<Vec<DataApiPosition>> {
+        let query_string = query.to_query_string();
+        let url = format!("{}/positions?{}", self.config.base_url, query_string);
+        debug!(%url, "Fetching positions with query");
 
         let response = self.client.get(&url).send().await?;
         self.handle_response::<Vec<DataApiPosition>>(response).await
+    }
+
+    /// Get positions for a wallet address (simple version)
+    ///
+    /// For more control over query parameters, use [`Self::get_positions_with_query`].
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_positions(&self, address: &str) -> Result<Vec<DataApiPosition>> {
+        let query = PositionsQuery::new(address);
+        self.get_positions_with_query(&query).await
     }
 
     /// Get trades for a wallet address
@@ -211,6 +245,94 @@ impl DataClient {
 
         let response = self.client.get(&url).send().await?;
         self.handle_response::<Vec<ClosedPosition>>(response).await
+    }
+
+    /// Get all redeemable positions for a user
+    ///
+    /// Convenience method to fetch positions that can be redeemed
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_redeemable_positions(&self, address: &str) -> Result<Vec<DataApiPosition>> {
+        let query = PositionsQuery::new(address).redeemable_only();
+        self.get_positions_with_query(&query).await
+    }
+
+    /// Get all mergeable positions for a user
+    ///
+    /// Convenience method to fetch positions that can be merged
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_mergeable_positions(&self, address: &str) -> Result<Vec<DataApiPosition>> {
+        let query = PositionsQuery::new(address).mergeable_only();
+        self.get_positions_with_query(&query).await
+    }
+
+    /// Get positions for specific markets
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - User wallet address
+    /// * `market_ids` - Vector of market condition IDs
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_positions_for_markets(
+        &self,
+        address: &str,
+        market_ids: Vec<String>,
+    ) -> Result<Vec<DataApiPosition>> {
+        let query = PositionsQuery::new(address).with_markets(market_ids);
+        self.get_positions_with_query(&query).await
+    }
+
+    /// Get positions for specific events
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - User wallet address
+    /// * `event_ids` - Vector of event IDs
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_positions_for_events(
+        &self,
+        address: &str,
+        event_ids: Vec<i64>,
+    ) -> Result<Vec<DataApiPosition>> {
+        let query = PositionsQuery::new(address).with_event_ids(event_ids);
+        self.get_positions_with_query(&query).await
+    }
+
+    /// Get top profitable positions sorted by PnL
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - User wallet address
+    /// * `limit` - Number of positions to return (default: 10)
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_top_profitable_positions(
+        &self,
+        address: &str,
+        limit: Option<u32>,
+    ) -> Result<Vec<DataApiPosition>> {
+        use crate::types::{PositionSortBy, SortDirection};
+        
+        let query = PositionsQuery::new(address)
+            .with_limit(limit.unwrap_or(10))
+            .sort_by(PositionSortBy::CashPnl)
+            .sort_direction(SortDirection::Desc);
+        
+        self.get_positions_with_query(&query).await
+    }
+
+    /// Get positions above a certain size threshold
+    ///
+    /// # Arguments
+    ///
+    /// * `address` - User wallet address
+    /// * `threshold` - Minimum position size
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_positions_above_size(
+        &self,
+        address: &str,
+        threshold: f64,
+    ) -> Result<Vec<DataApiPosition>> {
+        let query = PositionsQuery::new(address).with_size_threshold(threshold);
+        self.get_positions_with_query(&query).await
     }
 
     /// Get biggest winners by category and time period
@@ -379,5 +501,89 @@ mod tests {
         assert_eq!(query.category, "politics");
         assert_eq!(query.time_period, "week");
         assert_eq!(query.limit, 50);
+    }
+
+    #[test]
+    fn test_positions_query_builder() {
+        use crate::types::{PositionSortBy, SortDirection};
+
+        let query = PositionsQuery::new("0x1234567890123456789012345678901234567890")
+            .with_size_threshold(10.0)
+            .redeemable_only()
+            .with_limit(50)
+            .with_offset(10)
+            .sort_by(PositionSortBy::CashPnl)
+            .sort_direction(SortDirection::Desc);
+
+        assert_eq!(query.user, "0x1234567890123456789012345678901234567890");
+        assert_eq!(query.size_threshold, Some(10.0));
+        assert_eq!(query.redeemable, Some(true));
+        assert_eq!(query.limit, Some(50));
+        assert_eq!(query.offset, Some(10));
+        assert_eq!(query.sort_by, Some(PositionSortBy::CashPnl));
+        assert_eq!(query.sort_direction, Some(SortDirection::Desc));
+    }
+
+    #[test]
+    fn test_positions_query_to_string() {
+        let query = PositionsQuery::new("0xabc")
+            .with_size_threshold(5.0)
+            .with_limit(20);
+
+        let query_string = query.to_query_string();
+
+        assert!(query_string.contains("user=0xabc"));
+        assert!(query_string.contains("sizeThreshold=5"));
+        assert!(query_string.contains("limit=20"));
+    }
+
+    #[test]
+    fn test_positions_query_with_markets() {
+        let markets = vec![
+            "0xdd22472e552920b8438158ea7238bfadfa4f736aa4cee91a6b86c39ead110917".to_string(),
+            "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890".to_string(),
+        ];
+
+        let query = PositionsQuery::new("0xuser").with_markets(markets.clone());
+
+        assert_eq!(query.markets, Some(markets));
+
+        let query_string = query.to_query_string();
+        assert!(query_string.contains("market="));
+        assert!(query_string.contains("0xdd22472e552920b8438158ea7238bfadfa4f736aa4cee91a6b86c39ead110917"));
+    }
+
+    #[test]
+    fn test_positions_query_with_event_ids() {
+        let event_ids = vec![123, 456, 789];
+        let query = PositionsQuery::new("0xuser").with_event_ids(event_ids.clone());
+
+        assert_eq!(query.event_ids, Some(event_ids));
+
+        let query_string = query.to_query_string();
+        assert!(query_string.contains("eventId=123,456,789"));
+    }
+
+    #[test]
+    fn test_position_sort_by_as_str() {
+        use crate::types::PositionSortBy;
+
+        assert_eq!(PositionSortBy::Current.as_str(), "CURRENT");
+        assert_eq!(PositionSortBy::Initial.as_str(), "INITIAL");
+        assert_eq!(PositionSortBy::Tokens.as_str(), "TOKENS");
+        assert_eq!(PositionSortBy::CashPnl.as_str(), "CASHPNL");
+        assert_eq!(PositionSortBy::PercentPnl.as_str(), "PERCENTPNL");
+        assert_eq!(PositionSortBy::Title.as_str(), "TITLE");
+        assert_eq!(PositionSortBy::Resolving.as_str(), "RESOLVING");
+        assert_eq!(PositionSortBy::Price.as_str(), "PRICE");
+        assert_eq!(PositionSortBy::AvgPrice.as_str(), "AVGPRICE");
+    }
+
+    #[test]
+    fn test_sort_direction_as_str() {
+        use crate::types::SortDirection;
+
+        assert_eq!(SortDirection::Asc.as_str(), "ASC");
+        assert_eq!(SortDirection::Desc.as_str(), "DESC");
     }
 }

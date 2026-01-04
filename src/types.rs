@@ -777,32 +777,74 @@ pub struct DataApiTrader {
 /// Polymarket position from Data API
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataApiPosition {
-    /// Position ID
-    pub id: String,
+    /// User proxy wallet address
+    #[serde(rename = "proxyWallet")]
+    pub proxy_wallet: String,
+    /// Asset token ID
+    pub asset: String,
     /// Market condition ID
     #[serde(rename = "conditionId")]
     pub condition_id: String,
-    /// Outcome (Yes/No)
-    pub outcome: String,
-    /// Position size
-    pub size: String,
+    /// Position size (number of tokens)
+    pub size: f64,
     /// Average entry price
     #[serde(rename = "avgPrice")]
-    pub avg_price: String,
-    /// Current value
-    #[serde(rename = "currentValue", default)]
-    pub current_value: Option<String>,
+    pub avg_price: f64,
+    /// Initial value of position
+    #[serde(rename = "initialValue")]
+    pub initial_value: f64,
+    /// Current value of position
+    #[serde(rename = "currentValue")]
+    pub current_value: f64,
+    /// Cash PnL
+    #[serde(rename = "cashPnl")]
+    pub cash_pnl: f64,
+    /// Percentage PnL
+    #[serde(rename = "percentPnl")]
+    pub percent_pnl: f64,
+    /// Total amount bought
+    #[serde(rename = "totalBought")]
+    pub total_bought: f64,
     /// Realized PnL
-    #[serde(rename = "realizedPnl", default)]
-    pub realized_pnl: Option<String>,
-    /// Position status
-    pub status: String,
-    /// Created timestamp
-    #[serde(rename = "createdAt", default)]
-    pub created_at: Option<String>,
-    /// Closed timestamp
-    #[serde(rename = "closedAt", default)]
-    pub closed_at: Option<String>,
+    #[serde(rename = "realizedPnl")]
+    pub realized_pnl: f64,
+    /// Percentage realized PnL
+    #[serde(rename = "percentRealizedPnl")]
+    pub percent_realized_pnl: f64,
+    /// Current market price
+    #[serde(rename = "curPrice")]
+    pub cur_price: f64,
+    /// Whether position is redeemable
+    pub redeemable: bool,
+    /// Whether position is mergeable
+    pub mergeable: bool,
+    /// Market title
+    pub title: String,
+    /// Market slug
+    pub slug: String,
+    /// Market icon URL
+    #[serde(default)]
+    pub icon: Option<String>,
+    /// Event slug
+    #[serde(rename = "eventSlug")]
+    pub event_slug: String,
+    /// Outcome name (Yes/No)
+    pub outcome: String,
+    /// Outcome index
+    #[serde(rename = "outcomeIndex")]
+    pub outcome_index: i32,
+    /// Opposite outcome name
+    #[serde(rename = "oppositeOutcome")]
+    pub opposite_outcome: String,
+    /// Opposite asset token ID
+    #[serde(rename = "oppositeAsset")]
+    pub opposite_asset: String,
+    /// Market end date
+    #[serde(rename = "endDate")]
+    pub end_date: String,
+    /// Whether this is a negative risk market
+    #[serde(rename = "negativeRisk")]
+    pub negative_risk: bool,
 }
 
 /// Polymarket trade from Data API
@@ -977,6 +1019,225 @@ impl BiggestWinnersQuery {
     pub fn with_category(mut self, category: impl Into<String>) -> Self {
         self.category = category.into();
         self
+    }
+}
+
+/// Sort field for positions query
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PositionSortBy {
+    /// Sort by current value
+    Current,
+    /// Sort by initial value
+    Initial,
+    /// Sort by number of tokens
+    Tokens,
+    /// Sort by cash PnL
+    CashPnl,
+    /// Sort by percent PnL
+    PercentPnl,
+    /// Sort by title
+    Title,
+    /// Sort by resolving date
+    Resolving,
+    /// Sort by current price
+    Price,
+    /// Sort by average price
+    AvgPrice,
+}
+
+impl PositionSortBy {
+    /// Convert to API string
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Current => "CURRENT",
+            Self::Initial => "INITIAL",
+            Self::Tokens => "TOKENS",
+            Self::CashPnl => "CASHPNL",
+            Self::PercentPnl => "PERCENTPNL",
+            Self::Title => "TITLE",
+            Self::Resolving => "RESOLVING",
+            Self::Price => "PRICE",
+            Self::AvgPrice => "AVGPRICE",
+        }
+    }
+}
+
+/// Sort direction for positions query
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortDirection {
+    /// Ascending
+    Asc,
+    /// Descending
+    Desc,
+}
+
+impl SortDirection {
+    /// Convert to API string
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Asc => "ASC",
+            Self::Desc => "DESC",
+        }
+    }
+}
+
+/// Query parameters for positions API
+#[derive(Debug, Clone, Default)]
+pub struct PositionsQuery {
+    /// User address (required)
+    pub user: String,
+    /// Comma-separated list of condition IDs (mutually exclusive with event_ids)
+    pub markets: Option<Vec<String>>,
+    /// Comma-separated list of event IDs (mutually exclusive with markets)
+    pub event_ids: Option<Vec<i64>>,
+    /// Minimum position size threshold
+    pub size_threshold: Option<f64>,
+    /// Filter by redeemable positions
+    pub redeemable: Option<bool>,
+    /// Filter by mergeable positions
+    pub mergeable: Option<bool>,
+    /// Maximum number of results (0-500)
+    pub limit: Option<u32>,
+    /// Pagination offset (0-10000)
+    pub offset: Option<u32>,
+    /// Sort field
+    pub sort_by: Option<PositionSortBy>,
+    /// Sort direction
+    pub sort_direction: Option<SortDirection>,
+    /// Filter by title (partial match)
+    pub title: Option<String>,
+}
+
+impl PositionsQuery {
+    /// Create new query with user address
+    #[must_use]
+    pub fn new(user: impl Into<String>) -> Self {
+        Self {
+            user: user.into(),
+            ..Default::default()
+        }
+    }
+
+    /// Set markets filter (condition IDs)
+    #[must_use]
+    pub fn with_markets(mut self, markets: Vec<String>) -> Self {
+        self.markets = Some(markets);
+        self
+    }
+
+    /// Set event IDs filter
+    #[must_use]
+    pub fn with_event_ids(mut self, event_ids: Vec<i64>) -> Self {
+        self.event_ids = Some(event_ids);
+        self
+    }
+
+    /// Set size threshold
+    #[must_use]
+    pub fn with_size_threshold(mut self, threshold: f64) -> Self {
+        self.size_threshold = Some(threshold);
+        self
+    }
+
+    /// Filter redeemable positions only
+    #[must_use]
+    pub fn redeemable_only(mut self) -> Self {
+        self.redeemable = Some(true);
+        self
+    }
+
+    /// Filter mergeable positions only
+    #[must_use]
+    pub fn mergeable_only(mut self) -> Self {
+        self.mergeable = Some(true);
+        self
+    }
+
+    /// Set limit
+    #[must_use]
+    pub fn with_limit(mut self, limit: u32) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    /// Set offset
+    #[must_use]
+    pub fn with_offset(mut self, offset: u32) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+
+    /// Set sort field
+    #[must_use]
+    pub fn sort_by(mut self, sort_by: PositionSortBy) -> Self {
+        self.sort_by = Some(sort_by);
+        self
+    }
+
+    /// Set sort direction
+    #[must_use]
+    pub fn sort_direction(mut self, direction: SortDirection) -> Self {
+        self.sort_direction = Some(direction);
+        self
+    }
+
+    /// Filter by title
+    #[must_use]
+    pub fn with_title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    /// Build URL query string
+    pub fn to_query_string(&self) -> String {
+        let mut params = vec![format!("user={}", self.user)];
+
+        if let Some(markets) = &self.markets {
+            if !markets.is_empty() {
+                params.push(format!("market={}", markets.join(",")));
+            }
+        }
+
+        if let Some(event_ids) = &self.event_ids {
+            if !event_ids.is_empty() {
+                let ids: Vec<String> = event_ids.iter().map(|id| id.to_string()).collect();
+                params.push(format!("eventId={}", ids.join(",")));
+            }
+        }
+
+        if let Some(threshold) = self.size_threshold {
+            params.push(format!("sizeThreshold={}", threshold));
+        }
+
+        if let Some(redeemable) = self.redeemable {
+            params.push(format!("redeemable={}", redeemable));
+        }
+
+        if let Some(mergeable) = self.mergeable {
+            params.push(format!("mergeable={}", mergeable));
+        }
+
+        if let Some(limit) = self.limit {
+            params.push(format!("limit={}", limit));
+        }
+
+        if let Some(offset) = self.offset {
+            params.push(format!("offset={}", offset));
+        }
+
+        if let Some(sort_by) = &self.sort_by {
+            params.push(format!("sortBy={}", sort_by.as_str()));
+        }
+
+        if let Some(direction) = &self.sort_direction {
+            params.push(format!("sortDirection={}", direction.as_str()));
+        }
+
+        if let Some(title) = &self.title {
+            params.push(format!("title={}", urlencoding::encode(title)));
+        }
+
+        params.join("&")
     }
 }
 

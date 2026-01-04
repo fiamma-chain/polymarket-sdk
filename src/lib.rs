@@ -98,8 +98,9 @@ pub use types::{
     ApiCredentials, BiggestWinner, BiggestWinnersQuery, BookLevel, ClosedPosition, ConnectionStats,
     DataApiActivity, DataApiPosition, DataApiTrade, DataApiTrader, Event, EventMarket,
     LeaderboardEntry, ListParams, Market, MarketOrderArgs, NewOrder, NewOrderData, OrderOptions,
-    OrderType, PaginationParams, SearchEvent, SearchProfile, SearchRequest, SearchResponse,
-    SearchTag, Side, SignedOrderRequest, Tag, Token, TraderProfile,
+    OrderType, PaginationParams, PositionSortBy, PositionsQuery, SearchEvent, SearchProfile,
+    SearchRequest, SearchResponse, SearchTag, Side, SignedOrderRequest, SortDirection, Tag, Token,
+    TraderProfile,
 };
 
 #[cfg(feature = "auth")]

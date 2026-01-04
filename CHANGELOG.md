@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2025-01-04
+
+### Added
+
+- **DataClient** - Enhanced positions API with full query parameter support
+  - `get_positions_with_query()` - Advanced query method supporting all API parameters
+  - `get_redeemable_positions()` - Fetch positions that can be redeemed
+  - `get_mergeable_positions()` - Fetch positions that can be merged
+  - `get_positions_for_markets()` - Query positions for specific markets
+  - `get_positions_for_events()` - Query positions for specific events
+  - `get_top_profitable_positions()` - Get most profitable positions sorted by PnL
+  - `get_positions_above_size()` - Filter positions by size threshold
+- **PositionsQuery** - Comprehensive query builder for positions API
+  - Support for all query parameters: markets, eventIds, sizeThreshold, redeemable, mergeable
+  - Pagination support: limit (0-500), offset (0-10000)
+  - Sorting support: 9 sort fields (current, initial, tokens, cashPnl, percentPnl, title, resolving, price, avgPrice)
+  - Sort direction: ascending/descending
+  - Title search with URL encoding
+- **PositionSortBy** - Type-safe enum for position sorting fields
+- **SortDirection** - Type-safe enum for sort direction (Asc/Desc)
+- **DataApiPosition** - Complete field mapping matching [Polymarket API specification](https://docs.polymarket.com/api-reference/core/get-current-positions-for-a-user)
+  - 24 fields including proxy_wallet, asset, condition_id, size, prices, PnL metrics, redeemable/mergeable flags
+  - Numeric fields now use `f64` instead of `String` for better type safety
+  - Added market metadata: title, slug, icon, event_slug, outcome details, end_date
+  - Added negative_risk flag for negative risk markets
+
+### Changed
+
+- **DataApiPosition** - Breaking change: Field types updated from `String` to `f64` for numeric values
+  - Affected fields: size, avg_price, initial_value, current_value, cash_pnl, percent_pnl, total_bought, realized_pnl, percent_realized_pnl, cur_price
+  - Removed: id, status, created_at, closed_at fields (not in current API response)
+- **get_positions()** - Now internally uses `PositionsQuery` for consistency, maintains backward compatibility
+
+### Documentation
+
+- Added comprehensive examples in `examples/user_positions.rs` with 9 usage scenarios
+- Added Chinese documentation `docs/positions_api_cn.md` for positions API
+- Added technical documentation `POSITIONS_API_ENHANCEMENT.md` with implementation details
+
+### Tests
+
+- Added 8 unit tests for positions query functionality
+  - Query builder tests
+  - Query string generation tests
+  - Market and event filtering tests
+  - Sort field and direction tests
+
 ## [0.1.3] - 2025-12-25
 
 ### Fixed
