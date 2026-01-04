@@ -55,7 +55,10 @@ async fn main() -> Result<()> {
     }
 
     println!("\n=== Example 3: Get top profitable positions ===");
-    match client.get_top_profitable_positions(user_address, Some(5)).await {
+    match client
+        .get_top_profitable_positions(user_address, Some(5))
+        .await
+    {
         Ok(positions) => {
             println!("Top 5 most profitable positions:");
             for (i, pos) in positions.iter().enumerate() {
@@ -141,7 +144,11 @@ async fn main() -> Result<()> {
 
     match client.get_positions_with_query(&query).await {
         Ok(positions) => {
-            println!("Page {} (showing {} positions):", page_number + 1, positions.len());
+            println!(
+                "Page {} (showing {} positions):",
+                page_number + 1,
+                positions.len()
+            );
             for (i, pos) in positions.iter().enumerate() {
                 println!(
                     "  {}. {} ({}) - Value: ${:.2}",
@@ -196,7 +203,10 @@ async fn main() -> Result<()> {
                 println!("  Cash PnL: ${:.2}", pos.cash_pnl);
                 println!("  Percent PnL: {:.2}%", pos.percent_pnl * 100.0);
                 println!("  Realized PnL: ${:.2}", pos.realized_pnl);
-                println!("  Percent Realized PnL: {:.2}%", pos.percent_realized_pnl * 100.0);
+                println!(
+                    "  Percent Realized PnL: {:.2}%",
+                    pos.percent_realized_pnl * 100.0
+                );
                 println!("  Redeemable: {}", pos.redeemable);
                 println!("  Mergeable: {}", pos.mergeable);
                 println!("  Negative Risk: {}", pos.negative_risk);
@@ -211,4 +221,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

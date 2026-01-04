@@ -175,7 +175,10 @@ impl DataClient {
     /// let positions = client.get_positions_with_query(&query).await?;
     /// ```
     #[instrument(skip(self), level = "debug")]
-    pub async fn get_positions_with_query(&self, query: &PositionsQuery) -> Result<Vec<DataApiPosition>> {
+    pub async fn get_positions_with_query(
+        &self,
+        query: &PositionsQuery,
+    ) -> Result<Vec<DataApiPosition>> {
         let query_string = query.to_query_string();
         let url = format!("{}/positions?{}", self.config.base_url, query_string);
         debug!(%url, "Fetching positions with query");
@@ -310,12 +313,12 @@ impl DataClient {
         limit: Option<u32>,
     ) -> Result<Vec<DataApiPosition>> {
         use crate::types::{PositionSortBy, SortDirection};
-        
+
         let query = PositionsQuery::new(address)
             .with_limit(limit.unwrap_or(10))
             .sort_by(PositionSortBy::CashPnl)
             .sort_direction(SortDirection::Desc);
-        
+
         self.get_positions_with_query(&query).await
     }
 
@@ -550,7 +553,8 @@ mod tests {
 
         let query_string = query.to_query_string();
         assert!(query_string.contains("market="));
-        assert!(query_string.contains("0xdd22472e552920b8438158ea7238bfadfa4f736aa4cee91a6b86c39ead110917"));
+        assert!(query_string
+            .contains("0xdd22472e552920b8438158ea7238bfadfa4f736aa4cee91a6b86c39ead110917"));
     }
 
     #[test]
