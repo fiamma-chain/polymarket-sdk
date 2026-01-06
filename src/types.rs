@@ -480,56 +480,548 @@ where
 
 /// Event metadata from Gamma API
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Event {
     /// Event ID
     pub id: String,
+    /// Event ticker
+    #[serde(default)]
+    pub ticker: Option<String>,
     /// Event slug
     pub slug: String,
-    /// Event name
+    /// Event title
     #[serde(default)]
-    pub name: Option<String>,
+    pub title: Option<String>,
     /// Event description
     #[serde(default)]
     pub description: Option<String>,
+    /// Resolution source URL or description
+    #[serde(default)]
+    pub resolution_source: Option<String>,
+    /// Start date (ISO format)
+    #[serde(default)]
+    pub start_date: Option<String>,
+    /// Creation date (ISO format)
+    #[serde(default)]
+    pub creation_date: Option<String>,
+    /// End date (ISO format)
+    #[serde(default)]
+    pub end_date: Option<String>,
+    /// Event image URL
+    #[serde(default)]
+    pub image: Option<String>,
+    /// Event icon URL
+    #[serde(default)]
+    pub icon: Option<String>,
     /// Whether event is active
     #[serde(default)]
     pub active: Option<bool>,
     /// Whether event is closed
     #[serde(default)]
     pub closed: Option<bool>,
-    /// Start date
+    /// Whether event is archived
     #[serde(default)]
-    pub start_date_iso: Option<String>,
-    /// End date
+    pub archived: Option<bool>,
+    /// Whether event is new
     #[serde(default)]
-    pub end_date_iso: Option<String>,
-    /// Sport type (for sports events)
+    pub new: Option<bool>,
+    /// Whether event is featured
     #[serde(default)]
-    pub sport: Option<String>,
+    pub featured: Option<bool>,
+    /// Whether event is restricted
+    #[serde(default)]
+    pub restricted: Option<bool>,
+    /// Total liquidity
+    #[serde(default)]
+    pub liquidity: Option<f64>,
+    /// Total volume
+    #[serde(default)]
+    pub volume: Option<f64>,
+    /// Open interest
+    #[serde(default)]
+    pub open_interest: Option<f64>,
+    /// Sort by field
+    #[serde(default)]
+    pub sort_by: Option<String>,
+    /// Created at timestamp
+    #[serde(default)]
+    pub created_at: Option<String>,
+    /// Updated at timestamp
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    /// Competitive score
+    #[serde(default)]
+    pub competitive: Option<f64>,
+    /// 24-hour volume
+    #[serde(default)]
+    pub volume24hr: Option<f64>,
+    /// 1-week volume
+    #[serde(default)]
+    pub volume1wk: Option<f64>,
+    /// 1-month volume
+    #[serde(default)]
+    pub volume1mo: Option<f64>,
+    /// 1-year volume
+    #[serde(default)]
+    pub volume1yr: Option<f64>,
+    /// Whether order book is enabled
+    #[serde(default)]
+    pub enable_order_book: Option<bool>,
+    /// CLOB liquidity
+    #[serde(default)]
+    pub liquidity_clob: Option<f64>,
+    /// Whether negative risk is enabled
+    #[serde(default)]
+    pub neg_risk: Option<bool>,
+    /// Negative risk market ID
+    #[serde(default)]
+    pub neg_risk_market_id: Option<String>,
+    /// Comment count
+    #[serde(default)]
+    pub comment_count: Option<i32>,
     /// Associated markets
     #[serde(default)]
     pub markets: Vec<EventMarket>,
+    /// Associated tags
+    #[serde(default)]
+    pub tags: Vec<EventTag>,
+    /// Whether this is a CYOM (Create Your Own Market)
+    #[serde(default)]
+    pub cyom: Option<bool>,
+    /// Whether to show all outcomes
+    #[serde(default)]
+    pub show_all_outcomes: Option<bool>,
+    /// Whether to show market images
+    #[serde(default)]
+    pub show_market_images: Option<bool>,
+    /// Whether negative risk is enabled for this event
+    #[serde(default)]
+    pub enable_neg_risk: Option<bool>,
+    /// Whether automatically active
+    #[serde(default)]
+    pub automatically_active: Option<bool>,
+    /// GMP chart mode
+    #[serde(default)]
+    pub gmp_chart_mode: Option<String>,
+    /// Whether negative risk is augmented
+    #[serde(default)]
+    pub neg_risk_augmented: Option<bool>,
+    /// Whether markets are cumulative
+    #[serde(default)]
+    pub cumulative_markets: Option<bool>,
+    /// Whether pending deployment
+    #[serde(default)]
+    pub pending_deployment: Option<bool>,
+    /// Whether currently deploying
+    #[serde(default)]
+    pub deploying: Option<bool>,
+    /// Deploying timestamp
+    #[serde(default)]
+    pub deploying_timestamp: Option<String>,
+    /// Whether requires translation
+    #[serde(default)]
+    pub requires_translation: Option<bool>,
 }
 
-/// Lightweight market info in events
+/// Tag associated with an event
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventTag {
+    /// Tag ID
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Tag label (display name)
+    #[serde(default)]
+    pub label: Option<String>,
+    /// Tag slug
+    #[serde(default)]
+    pub slug: Option<String>,
+    /// Whether to force show
+    #[serde(default)]
+    pub force_show: Option<bool>,
+    /// Whether to force hide
+    #[serde(default)]
+    pub force_hide: Option<bool>,
+    /// Published at timestamp
+    #[serde(default)]
+    pub published_at: Option<String>,
+    /// Updated by user ID
+    #[serde(default)]
+    pub updated_by: Option<i32>,
+    /// Created at timestamp
+    #[serde(default)]
+    pub created_at: Option<String>,
+    /// Updated at timestamp
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    /// Whether requires translation
+    #[serde(default)]
+    pub requires_translation: Option<bool>,
+}
+
+/// Market info within an event (full details from events endpoint)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventMarket {
-    /// Condition ID
-    pub condition_id: String,
     /// Market ID
     #[serde(default)]
-    pub market_id: Option<String>,
-    /// CLOB token IDs
+    pub id: Option<String>,
+    /// Market question
     #[serde(default)]
-    pub clob_token_ids: Option<String>,
+    pub question: Option<String>,
+    /// Condition ID
+    pub condition_id: String,
     /// Market slug
     #[serde(default)]
     pub slug: Option<String>,
+    /// End date (ISO format)
+    #[serde(default)]
+    pub end_date: Option<String>,
+    /// Start date (ISO format)
+    #[serde(default)]
+    pub start_date: Option<String>,
+    /// Liquidity (string format from API)
+    #[serde(default)]
+    pub liquidity: Option<String>,
+    /// Market image URL
+    #[serde(default)]
+    pub image: Option<String>,
+    /// Market icon URL
+    #[serde(default)]
+    pub icon: Option<String>,
+    /// Market description
+    #[serde(default)]
+    pub description: Option<String>,
+    /// Outcomes JSON string (e.g., "[\"Yes\", \"No\"]")
+    #[serde(default)]
+    pub outcomes: Option<String>,
+    /// Outcome prices JSON string (e.g., "[\"0.5\", \"0.5\"]")
+    #[serde(default)]
+    pub outcome_prices: Option<String>,
+    /// Volume (string format from API)
+    #[serde(default)]
+    pub volume: Option<String>,
+    /// Whether market is active
+    #[serde(default)]
+    pub active: Option<bool>,
+    /// Whether market is closed
+    #[serde(default)]
+    pub closed: Option<bool>,
+    /// Market maker address
+    #[serde(default)]
+    pub market_maker_address: Option<String>,
+    /// Created at timestamp
+    #[serde(default)]
+    pub created_at: Option<String>,
+    /// Updated at timestamp
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    /// Whether market is new
+    #[serde(default)]
+    pub new: Option<bool>,
+    /// Whether market is featured
+    #[serde(default)]
+    pub featured: Option<bool>,
+    /// Submitted by address
+    #[serde(default)]
+    pub submitted_by: Option<String>,
+    /// Whether market is archived
+    #[serde(default)]
+    pub archived: Option<bool>,
+    /// Resolved by address
+    #[serde(default)]
+    pub resolved_by: Option<String>,
+    /// Whether market is restricted
+    #[serde(default)]
+    pub restricted: Option<bool>,
+    /// Group item title (for multi-outcome events)
+    #[serde(default)]
+    pub group_item_title: Option<String>,
+    /// Group item threshold
+    #[serde(default)]
+    pub group_item_threshold: Option<String>,
+    /// Question ID (for negative risk markets)
+    #[serde(default, rename = "questionID")]
+    pub question_id: Option<String>,
+    /// Whether order book is enabled
+    #[serde(default)]
+    pub enable_order_book: Option<bool>,
+    /// Order price minimum tick size
+    #[serde(default)]
+    pub order_price_min_tick_size: Option<f64>,
+    /// Order minimum size
+    #[serde(default)]
+    pub order_min_size: Option<f64>,
+    /// Volume as number
+    #[serde(default)]
+    pub volume_num: Option<f64>,
+    /// Liquidity as number
+    #[serde(default)]
+    pub liquidity_num: Option<f64>,
+    /// End date ISO format (YYYY-MM-DD)
+    #[serde(default)]
+    pub end_date_iso: Option<String>,
+    /// Start date ISO format (YYYY-MM-DD)
+    #[serde(default)]
+    pub start_date_iso: Option<String>,
+    /// Whether dates have been reviewed
+    #[serde(default)]
+    pub has_reviewed_dates: Option<bool>,
+    /// 24-hour volume
+    #[serde(default)]
+    pub volume24hr: Option<f64>,
+    /// 1-week volume
+    #[serde(default)]
+    pub volume1wk: Option<f64>,
+    /// 1-month volume
+    #[serde(default)]
+    pub volume1mo: Option<f64>,
+    /// 1-year volume
+    #[serde(default)]
+    pub volume1yr: Option<f64>,
+    /// CLOB token IDs JSON string
+    #[serde(default)]
+    pub clob_token_ids: Option<String>,
+    /// UMA bond amount
+    #[serde(default)]
+    pub uma_bond: Option<String>,
+    /// UMA reward amount
+    #[serde(default)]
+    pub uma_reward: Option<String>,
+    /// 24-hour CLOB volume
+    #[serde(default)]
+    pub volume24hr_clob: Option<f64>,
+    /// 1-week CLOB volume
+    #[serde(default)]
+    pub volume1wk_clob: Option<f64>,
+    /// 1-month CLOB volume
+    #[serde(default)]
+    pub volume1mo_clob: Option<f64>,
+    /// 1-year CLOB volume
+    #[serde(default)]
+    pub volume1yr_clob: Option<f64>,
+    /// CLOB volume
+    #[serde(default)]
+    pub volume_clob: Option<f64>,
+    /// CLOB liquidity
+    #[serde(default)]
+    pub liquidity_clob: Option<f64>,
+    /// Whether accepting orders
+    #[serde(default)]
+    pub accepting_orders: Option<bool>,
+    /// Whether negative risk is enabled
+    #[serde(default)]
+    pub neg_risk: Option<bool>,
+    /// Negative risk market ID
+    #[serde(default, rename = "negRiskMarketID")]
+    pub neg_risk_market_id: Option<String>,
+    /// Negative risk request ID
+    #[serde(default, rename = "negRiskRequestID")]
+    pub neg_risk_request_id: Option<String>,
+    /// Whether market is ready
+    #[serde(default)]
+    pub ready: Option<bool>,
+    /// Whether market is funded
+    #[serde(default)]
+    pub funded: Option<bool>,
+    /// Accepting orders timestamp
+    #[serde(default)]
+    pub accepting_orders_timestamp: Option<String>,
+    /// Whether this is a CYOM market
+    #[serde(default)]
+    pub cyom: Option<bool>,
+    /// Competitive score
+    #[serde(default)]
+    pub competitive: Option<f64>,
+    /// Whether PagerDuty notification is enabled
+    #[serde(default)]
+    pub pager_duty_notification_enabled: Option<bool>,
+    /// Whether market is approved
+    #[serde(default)]
+    pub approved: Option<bool>,
+    /// Rewards minimum size
+    #[serde(default)]
+    pub rewards_min_size: Option<f64>,
+    /// Rewards maximum spread
+    #[serde(default)]
+    pub rewards_max_spread: Option<f64>,
+    /// Current spread
+    #[serde(default)]
+    pub spread: Option<f64>,
+    /// One day price change
+    #[serde(default)]
+    pub one_day_price_change: Option<f64>,
+    /// One hour price change
+    #[serde(default)]
+    pub one_hour_price_change: Option<f64>,
+    /// One week price change
+    #[serde(default)]
+    pub one_week_price_change: Option<f64>,
+    /// One month price change
+    #[serde(default)]
+    pub one_month_price_change: Option<f64>,
+    /// One year price change
+    #[serde(default)]
+    pub one_year_price_change: Option<f64>,
+    /// Last trade price
+    #[serde(default)]
+    pub last_trade_price: Option<f64>,
+    /// Best bid price
+    #[serde(default)]
+    pub best_bid: Option<f64>,
+    /// Best ask price
+    #[serde(default)]
+    pub best_ask: Option<f64>,
+    /// Whether automatically active
+    #[serde(default)]
+    pub automatically_active: Option<bool>,
+    /// Whether to clear book on start
+    #[serde(default)]
+    pub clear_book_on_start: Option<bool>,
+    /// Whether to show GMP series
+    #[serde(default)]
+    pub show_gmp_series: Option<bool>,
+    /// Whether to show GMP outcome
+    #[serde(default)]
+    pub show_gmp_outcome: Option<bool>,
+    /// Whether manual activation is required
+    #[serde(default)]
+    pub manual_activation: Option<bool>,
+    /// Whether this is the "other" option in negative risk
+    #[serde(default)]
+    pub neg_risk_other: Option<bool>,
+    /// UMA resolution statuses JSON string
+    #[serde(default)]
+    pub uma_resolution_statuses: Option<String>,
+    /// Whether pending deployment
+    #[serde(default)]
+    pub pending_deployment: Option<bool>,
+    /// Whether currently deploying
+    #[serde(default)]
+    pub deploying: Option<bool>,
+    /// Deploying timestamp
+    #[serde(default)]
+    pub deploying_timestamp: Option<String>,
+    /// Whether RFQ is enabled
+    #[serde(default)]
+    pub rfq_enabled: Option<bool>,
+    /// Whether holding rewards are enabled
+    #[serde(default)]
+    pub holding_rewards_enabled: Option<bool>,
+    /// Whether fees are enabled
+    #[serde(default)]
+    pub fees_enabled: Option<bool>,
+    /// Whether requires translation
+    #[serde(default)]
+    pub requires_translation: Option<bool>,
 }
 
-/// Tag metadata
+impl EventMarket {
+    /// Parse outcome prices from JSON string to vector of f64
+    ///
+    /// Returns a tuple of (yes_price, no_price) for binary markets
+    #[must_use]
+    pub fn parse_outcome_prices(&self) -> (Option<f64>, Option<f64>) {
+        let Some(prices_str) = &self.outcome_prices else {
+            return (None, None);
+        };
+
+        let prices: Vec<String> = serde_json::from_str(prices_str).unwrap_or_default();
+        let yes_price = prices.first().and_then(|s| s.parse::<f64>().ok());
+        let no_price = prices.get(1).and_then(|s| s.parse::<f64>().ok());
+        (yes_price, no_price)
+    }
+
+    /// Parse outcomes from JSON string to vector of strings
+    #[must_use]
+    pub fn parse_outcomes(&self) -> Vec<String> {
+        self.outcomes
+            .as_ref()
+            .and_then(|s| serde_json::from_str(s).ok())
+            .unwrap_or_default()
+    }
+
+    /// Parse CLOB token IDs from JSON string to vector of strings
+    #[must_use]
+    pub fn parse_clob_token_ids(&self) -> Vec<String> {
+        self.clob_token_ids
+            .as_ref()
+            .and_then(|s| serde_json::from_str(s).ok())
+            .unwrap_or_default()
+    }
+
+    /// Get the Yes token ID (first token in CLOB token IDs)
+    #[must_use]
+    pub fn yes_token_id(&self) -> Option<String> {
+        self.parse_clob_token_ids().first().cloned()
+    }
+
+    /// Get the No token ID (second token in CLOB token IDs)
+    #[must_use]
+    pub fn no_token_id(&self) -> Option<String> {
+        self.parse_clob_token_ids().get(1).cloned()
+    }
+
+    /// Check if this market is tradeable (active, accepting orders, not closed)
+    #[must_use]
+    pub fn is_tradeable(&self) -> bool {
+        self.active.unwrap_or(false)
+            && self.accepting_orders.unwrap_or(false)
+            && !self.closed.unwrap_or(false)
+    }
+}
+
+impl Event {
+    /// Get the display name for this event (title or slug as fallback)
+    #[must_use]
+    pub fn display_name(&self) -> &str {
+        self.title.as_deref().unwrap_or(&self.slug)
+    }
+
+    /// Get active markets only
+    #[must_use]
+    pub fn active_markets(&self) -> Vec<&EventMarket> {
+        self.markets
+            .iter()
+            .filter(|m| m.active.unwrap_or(false) && !m.closed.unwrap_or(false))
+            .collect()
+    }
+
+    /// Get tradeable markets only
+    #[must_use]
+    pub fn tradeable_markets(&self) -> Vec<&EventMarket> {
+        self.markets.iter().filter(|m| m.is_tradeable()).collect()
+    }
+
+    /// Check if this event is active and has tradeable markets
+    #[must_use]
+    pub fn is_tradeable(&self) -> bool {
+        self.active.unwrap_or(false)
+            && !self.closed.unwrap_or(false)
+            && self.markets.iter().any(|m| m.is_tradeable())
+    }
+
+    /// Get tag slugs for this event
+    #[must_use]
+    pub fn tag_slugs(&self) -> Vec<&str> {
+        self.tags
+            .iter()
+            .filter_map(|t| t.slug.as_deref())
+            .collect()
+    }
+
+    /// Check if this event has a specific tag
+    #[must_use]
+    pub fn has_tag(&self, tag_slug: &str) -> bool {
+        self.tags
+            .iter()
+            .any(|t| t.slug.as_deref() == Some(tag_slug))
+    }
+}
+
+/// Tag metadata from Gamma API
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Tag {
     /// Tag ID
     #[serde(default)]
@@ -537,12 +1029,36 @@ pub struct Tag {
     /// Tag slug
     #[serde(default)]
     pub slug: Option<String>,
-    /// Tag name
+    /// Tag label (display name)
+    #[serde(default)]
+    pub label: Option<String>,
+    /// Tag name (legacy field, use label instead)
     #[serde(default)]
     pub name: Option<String>,
     /// Tag description
     #[serde(default)]
     pub description: Option<String>,
+    /// Whether to force show
+    #[serde(default)]
+    pub force_show: Option<bool>,
+    /// Whether to force hide
+    #[serde(default)]
+    pub force_hide: Option<bool>,
+    /// Published at timestamp
+    #[serde(default)]
+    pub published_at: Option<String>,
+    /// Updated by user ID
+    #[serde(default)]
+    pub updated_by: Option<i32>,
+    /// Created at timestamp
+    #[serde(default)]
+    pub created_at: Option<String>,
+    /// Updated at timestamp
+    #[serde(default)]
+    pub updated_at: Option<String>,
+    /// Whether requires translation
+    #[serde(default)]
+    pub requires_translation: Option<bool>,
 }
 
 // ============================================================================

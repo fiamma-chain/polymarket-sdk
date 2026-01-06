@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2025-01-06
+
+### Added
+
+- **Event** - Comprehensive event data structure matching official Polymarket Gamma API
+  - Added 40+ new fields: ticker, title, image, icon, liquidity, volume metrics, neg_risk settings, tags, etc.
+  - Added `EventTag` struct for event tag metadata
+  - Helper methods: `display_name()`, `active_markets()`, `tradeable_markets()`, `is_tradeable()`, `tag_slugs()`, `has_tag()`
+- **EventMarket** - Complete market data within events
+  - Added 80+ fields covering all API response data: outcomes, prices, volume metrics, order book settings, etc.
+  - Helper methods: `parse_outcome_prices()`, `parse_outcomes()`, `parse_clob_token_ids()`, `yes_token_id()`, `no_token_id()`, `is_tradeable()`
+- **EventTag** - New type for event tag metadata with label, slug, force_show/hide, timestamps
+- **Tag** - Enhanced with additional fields: label, force_show, force_hide, published_at, updated_by, timestamps
+
+### Changed
+
+- **Event** - Breaking change: Field names updated to match API camelCase convention
+  - `name` → `title`
+  - `start_date_iso` → `start_date`
+  - `end_date_iso` → `end_date`
+  - Added `#[serde(rename_all = "camelCase")]` for proper JSON deserialization
+- **EventMarket** - Breaking change: Now contains full market data instead of lightweight info
+  - Previous `market_id` field removed (use `id` instead)
+  - All fields now optional with `#[serde(default)]` for API compatibility
+- **Tag** - Added `#[serde(rename_all = "camelCase")]` for proper JSON deserialization
+
 ## [0.1.4] - 2025-01-04
 
 ### Added
