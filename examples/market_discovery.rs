@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     for event in &events {
         println!(
             "  - {} ({} markets)",
-            event.name.as_deref().unwrap_or("Unknown"),
+            event.title.as_deref().unwrap_or("Unknown"),
             event.markets.len()
         );
     }

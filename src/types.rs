@@ -1004,10 +1004,7 @@ impl Event {
     /// Get tag slugs for this event
     #[must_use]
     pub fn tag_slugs(&self) -> Vec<&str> {
-        self.tags
-            .iter()
-            .filter_map(|t| t.slug.as_deref())
-            .collect()
+        self.tags.iter().filter_map(|t| t.slug.as_deref()).collect()
     }
 
     /// Check if this event has a specific tag
