@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2025-01-07
+
+### Fixed
+
+- **get_order** - Fixed order not found handling to match official SDK 0.3.x behavior
+  - Now properly handles HTTP 200 responses with null, empty object, or error messages
+  - API may return `null`, `{}`, or `{"error": "..."}` when order is not found instead of HTTP 404
+  - Returns `Ok(None)` instead of parse error for these cases
+
 ## [0.1.5] - 2025-01-06
 
 ### Added

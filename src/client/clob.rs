@@ -1041,7 +1041,57 @@ impl ClobClient {
             return Err(PolymarketError::api(status.as_u16(), body));
         }
 
-        let order: OpenOrder = response.json().await.map_err(|e| {
+        // Get response body as text first to handle various response formats
+        // The API may return HTTP 200 with null, empty object, or error message
+        // when the order is not found (similar to official SDK 0.3.x behavior)
+        let body = response.text().await.unwrap_or_default();
+
+        // Handle empty response or null
+        if body.is_empty() || body == "null" || body == "{}" {
+            info!(order_id = %order_id, "Order not found (empty/null response)");
+            return Ok(None);
+        }
+
+        // Try to parse as JSON Value first to check for error responses
+        let json_value: serde_json::Value = serde_json::from_str(&body).map_err(|e| {
+            PolymarketError::parse_with_source(
+                format!("Failed to parse order response as JSON: {e}"),
+                e,
+            )
+        })?;
+
+        // Check if response contains an error field or indicates not found
+        if let Some(obj) = json_value.as_object() {
+            // Handle {"error": "..."} responses
+            if obj.contains_key("error") {
+                let error_msg = obj
+                    .get("error")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown error");
+                // Treat error responses as "not found" if they indicate the order doesn't exist
+                if error_msg.to_lowercase().contains("not found")
+                    || error_msg.to_lowercase().contains("does not exist")
+                {
+                    info!(order_id = %order_id, error = %error_msg, "Order not found (error response)");
+                    return Ok(None);
+                }
+                // For other errors, return as API error
+                return Err(PolymarketError::api(200, format!("API error: {error_msg}")));
+            }
+
+            // Check if the response has required fields for OpenOrder
+            // If it's missing essential fields, treat as not found
+            if !obj.contains_key("id") && !obj.contains_key("order_id") {
+                info!(order_id = %order_id, "Order not found (missing required fields)");
+                return Ok(None);
+            }
+        } else if json_value.is_null() {
+            info!(order_id = %order_id, "Order not found (null JSON)");
+            return Ok(None);
+        }
+
+        // Now try to deserialize as OpenOrder
+        let order: OpenOrder = serde_json::from_value(json_value).map_err(|e| {
             PolymarketError::parse_with_source(format!("Failed to parse order response: {e}"), e)
         })?;
 
