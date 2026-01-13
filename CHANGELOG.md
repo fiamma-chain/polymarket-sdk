@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7] - 2025-01-13
+
+### Added
+
+- **ActivityType** - New enum for user activity types
+  - Supports all API activity types: `Trade`, `Split`, `Merge`, `Redeem`, `Reward`, `Conversion`, `MakerRebate`
+- **ActivitySortBy** - New enum for activity query sorting
+  - Supports: `Timestamp`, `Tokens`, `Cash`
+- **ActivityQuery** - New query builder for user activity API with full parameter support
+  - `new(user)` - Create query with user address
+  - `with_markets(markets)` - Filter by condition IDs
+  - `with_event_ids(ids)` - Filter by event IDs
+  - `with_types(types)` / `with_type(type)` - Filter by activity types
+  - `trades_only()` / `redeems_only()` - Convenience filters
+  - `from_timestamp(ts)` / `to_timestamp(ts)` / `with_time_range(start, end)` - Time range filters
+  - `with_side(side)` / `buys_only()` / `sells_only()` - Trade side filters
+  - `with_limit(n)` / `with_offset(n)` - Pagination
+  - `sort_by(field)` / `sort_direction(dir)` - Sorting
+  - `newest_first()` / `oldest_first()` / `largest_first()` - Convenience sorting
+- **DataClient::get_user_activity_with_query()** - New method for advanced activity queries
+
+### Changed
+
+- **DataApiActivity** - Added `activity_type` field (maps to API `type` field)
+  - Now properly deserializes activity type from API response
+  - Some fields changed to `Option<T>` to handle different activity types
+
 ## [0.1.6] - 2025-01-07
 
 ### Fixed

@@ -1398,6 +1398,9 @@ pub struct DataApiActivity {
     /// User's proxy wallet address
     #[serde(rename = "proxyWallet")]
     pub proxy_wallet: String,
+    /// Activity type (TRADE, SPLIT, MERGE, REDEEM, REWARD, CONVERSION, MAKER_REBATE)
+    #[serde(rename = "type")]
+    pub activity_type: ActivityType,
     /// User display name
     #[serde(default)]
     pub name: Option<String>,
@@ -1414,31 +1417,38 @@ pub struct DataApiActivity {
     #[serde(rename = "profileImageOptimized", default)]
     pub profile_image_optimized: Option<String>,
     /// Trade side (BUY/SELL)
-    pub side: String,
+    #[serde(default)]
+    pub side: Option<String>,
     /// Outcome (Yes/No)
-    pub outcome: String,
+    #[serde(default)]
+    pub outcome: Option<String>,
     /// Outcome index (0 or 1)
-    #[serde(rename = "outcomeIndex")]
-    pub outcome_index: i32,
+    #[serde(rename = "outcomeIndex", default)]
+    pub outcome_index: Option<i32>,
     /// Trade price
-    pub price: f64,
+    #[serde(default)]
+    pub price: Option<f64>,
     /// Trade size
-    pub size: f64,
+    #[serde(default)]
+    pub size: Option<f64>,
     /// USDC size
     #[serde(rename = "usdcSize", default)]
     pub usdc_size: Option<f64>,
     /// Asset/token ID
-    pub asset: String,
+    #[serde(default)]
+    pub asset: Option<String>,
     /// Market condition ID
     #[serde(rename = "conditionId")]
     pub condition_id: String,
     /// Market title
-    pub title: String,
+    #[serde(default)]
+    pub title: Option<String>,
     /// Market slug
-    pub slug: String,
+    #[serde(default)]
+    pub slug: Option<String>,
     /// Event slug
-    #[serde(rename = "eventSlug")]
-    pub event_slug: String,
+    #[serde(rename = "eventSlug", default)]
+    pub event_slug: Option<String>,
     /// Market icon
     #[serde(default)]
     pub icon: Option<String>,
@@ -1590,6 +1600,67 @@ impl SortDirection {
         match self {
             Self::Asc => "ASC",
             Self::Desc => "DESC",
+        }
+    }
+}
+
+// ============================================================================
+// Activity Types
+// ============================================================================
+
+/// Activity type for user activity API
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ActivityType {
+    /// Trade activity
+    Trade,
+    /// Split activity (splitting USDC into tokens)
+    Split,
+    /// Merge activity (merging tokens back to USDC)
+    Merge,
+    /// Redeem activity (claiming winnings)
+    Redeem,
+    /// Reward activity (earning rewards)
+    Reward,
+    /// Conversion activity
+    Conversion,
+    /// Maker rebate activity
+    MakerRebate,
+}
+
+impl ActivityType {
+    /// Convert to API string
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Trade => "TRADE",
+            Self::Split => "SPLIT",
+            Self::Merge => "MERGE",
+            Self::Redeem => "REDEEM",
+            Self::Reward => "REWARD",
+            Self::Conversion => "CONVERSION",
+            Self::MakerRebate => "MAKER_REBATE",
+        }
+    }
+}
+
+/// Sort field for activity query
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActivitySortBy {
+    /// Sort by timestamp (default)
+    Timestamp,
+    /// Sort by token amount
+    Tokens,
+    /// Sort by cash amount (USDC)
+    Cash,
+}
+
+impl ActivitySortBy {
+    /// Convert to API string
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Timestamp => "TIMESTAMP",
+            Self::Tokens => "TOKENS",
+            Self::Cash => "CASH",
         }
     }
 }
@@ -1748,6 +1819,233 @@ impl PositionsQuery {
 
         if let Some(title) = &self.title {
             params.push(format!("title={}", urlencoding::encode(title)));
+        }
+
+        params.join("&")
+    }
+}
+
+// ============================================================================
+// Activity Query Types
+// ============================================================================
+
+/// Query parameters for user activity API
+#[derive(Debug, Clone, Default)]
+pub struct ActivityQuery {
+    /// User address (required)
+    pub user: String,
+    /// Comma-separated list of condition IDs (mutually exclusive with event_ids)
+    pub markets: Option<Vec<String>>,
+    /// Comma-separated list of event IDs (mutually exclusive with markets)
+    pub event_ids: Option<Vec<i64>>,
+    /// Activity types to filter
+    pub activity_types: Option<Vec<ActivityType>>,
+    /// Start timestamp (unix)
+    pub start: Option<i64>,
+    /// End timestamp (unix)
+    pub end: Option<i64>,
+    /// Trade side filter (BUY/SELL)
+    pub side: Option<Side>,
+    /// Maximum number of results (0-500)
+    pub limit: Option<u32>,
+    /// Pagination offset (0-10000)
+    pub offset: Option<u32>,
+    /// Sort field
+    pub sort_by: Option<ActivitySortBy>,
+    /// Sort direction
+    pub sort_direction: Option<SortDirection>,
+}
+
+impl ActivityQuery {
+    /// Create new query with user address
+    #[must_use]
+    pub fn new(user: impl Into<String>) -> Self {
+        Self {
+            user: user.into(),
+            ..Default::default()
+        }
+    }
+
+    /// Set markets filter (condition IDs)
+    #[must_use]
+    pub fn with_markets(mut self, markets: Vec<String>) -> Self {
+        self.markets = Some(markets);
+        self
+    }
+
+    /// Set event IDs filter
+    #[must_use]
+    pub fn with_event_ids(mut self, event_ids: Vec<i64>) -> Self {
+        self.event_ids = Some(event_ids);
+        self
+    }
+
+    /// Set activity types filter
+    #[must_use]
+    pub fn with_types(mut self, types: Vec<ActivityType>) -> Self {
+        self.activity_types = Some(types);
+        self
+    }
+
+    /// Filter by single activity type
+    #[must_use]
+    pub fn with_type(mut self, activity_type: ActivityType) -> Self {
+        self.activity_types = Some(vec![activity_type]);
+        self
+    }
+
+    /// Filter trades only
+    #[must_use]
+    pub fn trades_only(self) -> Self {
+        self.with_type(ActivityType::Trade)
+    }
+
+    /// Filter redeems only
+    #[must_use]
+    pub fn redeems_only(self) -> Self {
+        self.with_type(ActivityType::Redeem)
+    }
+
+    /// Set start timestamp
+    #[must_use]
+    pub fn from_timestamp(mut self, start: i64) -> Self {
+        self.start = Some(start);
+        self
+    }
+
+    /// Set end timestamp
+    #[must_use]
+    pub fn to_timestamp(mut self, end: i64) -> Self {
+        self.end = Some(end);
+        self
+    }
+
+    /// Set time range
+    #[must_use]
+    pub fn with_time_range(mut self, start: i64, end: i64) -> Self {
+        self.start = Some(start);
+        self.end = Some(end);
+        self
+    }
+
+    /// Filter by trade side
+    #[must_use]
+    pub fn with_side(mut self, side: Side) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    /// Filter buy trades only
+    #[must_use]
+    pub fn buys_only(self) -> Self {
+        self.with_side(Side::Buy)
+    }
+
+    /// Filter sell trades only
+    #[must_use]
+    pub fn sells_only(self) -> Self {
+        self.with_side(Side::Sell)
+    }
+
+    /// Set limit
+    #[must_use]
+    pub fn with_limit(mut self, limit: u32) -> Self {
+        self.limit = Some(limit);
+        self
+    }
+
+    /// Set offset
+    #[must_use]
+    pub fn with_offset(mut self, offset: u32) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+
+    /// Set sort field
+    #[must_use]
+    pub fn sort_by(mut self, sort_by: ActivitySortBy) -> Self {
+        self.sort_by = Some(sort_by);
+        self
+    }
+
+    /// Set sort direction
+    #[must_use]
+    pub fn sort_direction(mut self, direction: SortDirection) -> Self {
+        self.sort_direction = Some(direction);
+        self
+    }
+
+    /// Sort by timestamp descending (newest first)
+    #[must_use]
+    pub fn newest_first(self) -> Self {
+        self.sort_by(ActivitySortBy::Timestamp)
+            .sort_direction(SortDirection::Desc)
+    }
+
+    /// Sort by timestamp ascending (oldest first)
+    #[must_use]
+    pub fn oldest_first(self) -> Self {
+        self.sort_by(ActivitySortBy::Timestamp)
+            .sort_direction(SortDirection::Asc)
+    }
+
+    /// Sort by cash amount descending (largest first)
+    #[must_use]
+    pub fn largest_first(self) -> Self {
+        self.sort_by(ActivitySortBy::Cash)
+            .sort_direction(SortDirection::Desc)
+    }
+
+    /// Build URL query string
+    pub fn to_query_string(&self) -> String {
+        let mut params = vec![format!("user={}", self.user)];
+
+        if let Some(markets) = &self.markets {
+            if !markets.is_empty() {
+                params.push(format!("market={}", markets.join(",")));
+            }
+        }
+
+        if let Some(event_ids) = &self.event_ids {
+            if !event_ids.is_empty() {
+                let ids: Vec<String> = event_ids.iter().map(|id| id.to_string()).collect();
+                params.push(format!("eventId={}", ids.join(",")));
+            }
+        }
+
+        if let Some(types) = &self.activity_types {
+            if !types.is_empty() {
+                let type_strs: Vec<&str> = types.iter().map(|t| t.as_str()).collect();
+                params.push(format!("type={}", type_strs.join(",")));
+            }
+        }
+
+        if let Some(start) = self.start {
+            params.push(format!("start={}", start));
+        }
+
+        if let Some(end) = self.end {
+            params.push(format!("end={}", end));
+        }
+
+        if let Some(side) = &self.side {
+            params.push(format!("side={}", side.as_str()));
+        }
+
+        if let Some(limit) = self.limit {
+            params.push(format!("limit={}", limit));
+        }
+
+        if let Some(offset) = self.offset {
+            params.push(format!("offset={}", offset));
+        }
+
+        if let Some(sort_by) = &self.sort_by {
+            params.push(format!("sortBy={}", sort_by.as_str()));
+        }
+
+        if let Some(direction) = &self.sort_direction {
+            params.push(format!("sortDirection={}", direction.as_str()));
         }
 
         params.join("&")

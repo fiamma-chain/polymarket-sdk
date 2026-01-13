@@ -26,8 +26,8 @@ use tracing::{debug, instrument};
 use crate::core::{clob_api_url, data_api_url};
 use crate::core::{PolymarketError, Result};
 use crate::types::{
-    BiggestWinner, BiggestWinnersQuery, ClosedPosition, DataApiActivity, DataApiPosition,
-    DataApiTrade, DataApiTrader, PositionsQuery,
+    ActivityQuery, BiggestWinner, BiggestWinnersQuery, ClosedPosition, DataApiActivity,
+    DataApiPosition, DataApiTrade, DataApiTrader, PositionsQuery,
 };
 
 /// Data API configuration
@@ -210,7 +210,48 @@ impl DataClient {
         self.handle_response::<Vec<DataApiTrade>>(response).await
     }
 
-    /// Get user activity (trades, position changes)
+    /// Get user activity with full query options
+    ///
+    /// Use [`ActivityQuery`] to build complex queries with filtering, sorting, and pagination.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use polymarket_sdk::types::{ActivityQuery, ActivityType, ActivitySortBy, SortDirection, Side};
+    ///
+    /// // Get recent trades for a user
+    /// let query = ActivityQuery::new("0x...")
+    ///     .trades_only()
+    ///     .with_limit(50)
+    ///     .newest_first();
+    ///
+    /// let activity = client.get_user_activity_with_query(&query).await?;
+    ///
+    /// // Get buy trades in a specific time range
+    /// let query = ActivityQuery::new("0x...")
+    ///     .with_type(ActivityType::Trade)
+    ///     .buys_only()
+    ///     .with_time_range(start_ts, end_ts)
+    ///     .largest_first();
+    ///
+    /// let activity = client.get_user_activity_with_query(&query).await?;
+    /// ```
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_user_activity_with_query(
+        &self,
+        query: &ActivityQuery,
+    ) -> Result<Vec<DataApiActivity>> {
+        let query_string = query.to_query_string();
+        let url = format!("{}/activity?{}", self.config.base_url, query_string);
+        debug!(%url, "Fetching user activity with query");
+
+        let response = self.client.get(&url).send().await?;
+        self.handle_response::<Vec<DataApiActivity>>(response).await
+    }
+
+    /// Get user activity (trades, position changes) - simple version
+    ///
+    /// For more control over query parameters, use [`Self::get_user_activity_with_query`].
     #[instrument(skip(self), level = "debug")]
     pub async fn get_user_activity(
         &self,
@@ -218,16 +259,14 @@ impl DataClient {
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<Vec<DataApiActivity>> {
-        let limit = limit.unwrap_or(100);
-        let offset = offset.unwrap_or(0);
-        let url = format!(
-            "{}/activity?user={}&limit={}&offset={}",
-            self.config.base_url, address, limit, offset
-        );
-        debug!(%url, "Fetching user activity");
-
-        let response = self.client.get(&url).send().await?;
-        self.handle_response::<Vec<DataApiActivity>>(response).await
+        let mut query = ActivityQuery::new(address);
+        if let Some(l) = limit {
+            query = query.with_limit(l);
+        }
+        if let Some(o) = offset {
+            query = query.with_offset(o);
+        }
+        self.get_user_activity_with_query(&query).await
     }
 
     /// Get closed positions for a user (for PnL calculation)

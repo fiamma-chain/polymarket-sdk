@@ -95,12 +95,12 @@ pub use core::{Endpoints, Error, PolymarketError, Result};
 // ============================================================================
 
 pub use types::{
-    ApiCredentials, BiggestWinner, BiggestWinnersQuery, BookLevel, ClosedPosition, ConnectionStats,
-    DataApiActivity, DataApiPosition, DataApiTrade, DataApiTrader, Event, EventMarket, EventTag,
-    LeaderboardEntry, ListParams, Market, MarketOrderArgs, NewOrder, NewOrderData, OrderOptions,
-    OrderType, PaginationParams, PositionSortBy, PositionsQuery, SearchEvent, SearchProfile,
-    SearchRequest, SearchResponse, SearchTag, Side, SignedOrderRequest, SortDirection, Tag, Token,
-    TraderProfile,
+    ActivityQuery, ActivitySortBy, ActivityType, ApiCredentials, BiggestWinner,
+    BiggestWinnersQuery, BookLevel, ClosedPosition, ConnectionStats, DataApiActivity,
+    DataApiPosition, DataApiTrade, DataApiTrader, Event, EventMarket, EventTag, LeaderboardEntry,
+    ListParams, Market, MarketOrderArgs, NewOrder, NewOrderData, OrderOptions, OrderType,
+    PaginationParams, PositionSortBy, PositionsQuery, SearchEvent, SearchProfile, SearchRequest,
+    SearchResponse, SearchTag, Side, SignedOrderRequest, SortDirection, Tag, Token, TraderProfile,
 };
 
 #[cfg(feature = "auth")]
