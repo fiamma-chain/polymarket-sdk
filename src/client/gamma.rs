@@ -23,7 +23,7 @@ use std::time::Duration;
 
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::{debug, info, instrument};
+use tracing::{debug, instrument};
 use url::Url;
 
 use crate::core::gamma_api_url;
@@ -378,8 +378,7 @@ impl GammaClient {
         }
 
         let url_str = url.to_string();
-        debug!(%url_str, token_count = clob_token_ids.len(), "Fetching markets by CLOB token IDs");
-        info!(%url_str, token_count = clob_token_ids.len(), "Gamma get_markets_by_clob_token_ids request");
+        debug!(%url_str, token_count = clob_token_ids.len(), "Gamma get_markets_by_clob_token_ids request");
 
         let response = self.client.get(url).send().await?;
         self.handle_response::<Vec<Market>>(response).await
@@ -450,8 +449,7 @@ impl GammaClient {
         }
 
         let url_str = url.to_string();
-        debug!(%url_str, condition_count = condition_ids.len(), "Fetching markets by condition IDs");
-        info!(%url_str, condition_count = condition_ids.len(), "Gamma get_markets_by_condition_ids request");
+        debug!(%url_str, condition_count = condition_ids.len(), "Gamma get_markets_by_condition_ids request");
 
         let response = self.client.get(url).send().await?;
         self.handle_response::<Vec<Market>>(response).await
