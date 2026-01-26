@@ -22,15 +22,14 @@ pub use crate::core::{Endpoints, Error, PolymarketError, Result};
 // Common types
 pub use crate::types::{
     ApiCredentials, BookLevel, Event, ListParams, Market, OrderOptions, OrderType,
-    PaginationParams, SearchRequest, SearchResponse, Side, SignedOrderRequest, Token,
-    TraderProfile,
+    PaginationParams, PublicProfile, SearchRequest, SearchResponse, Side, SignedOrderRequest,
+    Token, TraderProfile,
 };
 
 // Clients (if enabled)
 #[cfg(feature = "client")]
 pub use crate::client::{
-    ClobClient, ClobConfig, DataClient, DataConfig, GammaClient, GammaConfig, ProfilesClient,
-    ProfilesConfig,
+    ClobClient, ClobConfig, DataClient, DataConfig, GammaClient, GammaConfig,
 };
 
 // Auth (if enabled)

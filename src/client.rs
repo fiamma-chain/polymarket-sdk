@@ -2,15 +2,13 @@
 //!
 //! This module provides clients for different Polymarket APIs:
 //!
-//! - [`GammaClient`] - Market discovery and metadata
+//! - [`GammaClient`] - Market discovery, metadata, and public profiles
 //! - [`DataClient`] - Trader data, positions, and leaderboards
-//! - [`ProfilesClient`] - User profiles
 //! - [`ClobClient`] - Order book operations and trading
 
 pub mod clob;
 pub mod data;
 pub mod gamma;
-pub mod profiles;
 
 pub use clob::{
     ApiKeyResponse, CancelResponse, ClobClient, ClobConfig, DeriveApiKeyResponse, OpenOrder,
@@ -18,4 +16,3 @@ pub use clob::{
 };
 pub use data::{DataClient, DataConfig};
 pub use gamma::{GammaClient, GammaConfig};
-pub use profiles::{ProfilesClient, ProfilesConfig};

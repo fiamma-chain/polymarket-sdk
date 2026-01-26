@@ -28,7 +28,7 @@ use url::Url;
 
 use crate::core::gamma_api_url;
 use crate::core::{PolymarketError, Result};
-use crate::types::{Event, ListParams, Market, Tag};
+use crate::types::{Event, ListParams, Market, PublicProfile, Tag};
 
 /// Gamma API configuration
 #[derive(Debug, Clone)]
@@ -482,6 +482,52 @@ impl GammaClient {
         }
 
         Ok(all_markets)
+    }
+
+    // =========================================================================
+    // Public Profile API
+    // =========================================================================
+
+    /// Get public profile by wallet address
+    ///
+    /// This endpoint returns public profile information for a given wallet address
+    /// (either proxy wallet or user address).
+    ///
+    /// # Arguments
+    /// * `address` - The wallet address (0x-prefixed, 40 hex chars)
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let client = GammaClient::with_defaults()?;
+    /// if let Some(profile) = client.get_public_profile("0x7c3db723f1d4d8cb9c550095203b686cb11e5c6b").await? {
+    ///     println!("Name: {:?}", profile.get_display_name());
+    ///     println!("Verified: {}", profile.is_verified());
+    /// }
+    /// ```
+    #[instrument(skip(self), level = "debug")]
+    pub async fn get_public_profile(&self, address: &str) -> Result<Option<PublicProfile>> {
+        let url = format!(
+            "{}/public-profile?address={}",
+            self.config.base_url,
+            address.to_lowercase()
+        );
+        debug!(%url, %address, "Fetching public profile");
+
+        let response = self.client.get(&url).send().await?;
+        let status = response.status();
+
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        if status == reqwest::StatusCode::BAD_REQUEST {
+            // Invalid address format
+            let body = response.text().await.unwrap_or_default();
+            debug!(%body, "Invalid address format");
+            return Ok(None);
+        }
+
+        self.handle_response::<PublicProfile>(response).await.map(Some)
     }
 
     // =========================================================================

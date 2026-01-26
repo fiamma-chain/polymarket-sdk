@@ -99,8 +99,9 @@ pub use types::{
     BiggestWinnersQuery, BookLevel, ClosedPosition, ConnectionStats, DataApiActivity,
     DataApiPosition, DataApiTrade, DataApiTrader, Event, EventMarket, EventTag, LeaderboardEntry,
     ListParams, Market, MarketOrderArgs, NewOrder, NewOrderData, OrderOptions, OrderType,
-    PaginationParams, PositionSortBy, PositionsQuery, SearchEvent, SearchProfile, SearchRequest,
-    SearchResponse, SearchTag, Side, SignedOrderRequest, SortDirection, Tag, Token, TraderProfile,
+    PaginationParams, PositionSortBy, PositionsQuery, PublicProfile, PublicProfileUser,
+    SearchEvent, SearchProfile, SearchRequest, SearchResponse, SearchTag, Side, SignedOrderRequest,
+    SortDirection, Tag, Token, TraderProfile,
 };
 
 #[cfg(feature = "auth")]
@@ -126,7 +127,6 @@ pub use auth::{
 pub use client::{
     ApiKeyResponse, CancelResponse, ClobClient, ClobConfig, DataClient, DataConfig,
     DeriveApiKeyResponse, GammaClient, GammaConfig, OpenOrder, OrderResponse, PaginatedResponse,
-    ProfilesClient, ProfilesConfig,
 };
 
 // ============================================================================

@@ -2220,6 +2220,74 @@ pub struct SearchTag {
     pub slug: Option<String>,
 }
 
+// ============================================================================
+// Public Profile Types (Gamma API)
+// ============================================================================
+
+/// Public profile response from Gamma API `/public-profile` endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicProfile {
+    /// ISO 8601 timestamp of when the profile was created
+    #[serde(default)]
+    pub created_at: Option<String>,
+    /// The proxy wallet address
+    #[serde(default)]
+    pub proxy_wallet: Option<String>,
+    /// URL to the profile image
+    #[serde(default)]
+    pub profile_image: Option<String>,
+    /// Whether the username is displayed publicly
+    #[serde(default)]
+    pub display_username_public: Option<bool>,
+    /// Profile bio
+    #[serde(default)]
+    pub bio: Option<String>,
+    /// Auto-generated pseudonym
+    #[serde(default)]
+    pub pseudonym: Option<String>,
+    /// User-chosen display name
+    #[serde(default)]
+    pub name: Option<String>,
+    /// X (Twitter) username
+    #[serde(rename = "xUsername", default)]
+    pub x_username: Option<String>,
+    /// Whether the profile has a verified badge
+    #[serde(default)]
+    pub verified_badge: Option<bool>,
+    /// Array of associated user objects
+    #[serde(default)]
+    pub users: Vec<PublicProfileUser>,
+}
+
+impl PublicProfile {
+    /// Get display name (prefer name, fallback to pseudonym)
+    #[must_use]
+    pub fn get_display_name(&self) -> Option<&str> {
+        self.name.as_deref().or(self.pseudonym.as_deref())
+    }
+
+    /// Check if this profile has a verified badge
+    #[must_use]
+    pub fn is_verified(&self) -> bool {
+        self.verified_badge.unwrap_or(false)
+    }
+}
+
+/// User object associated with a public profile
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublicProfileUser {
+    /// User ID
+    #[serde(default)]
+    pub id: Option<String>,
+    /// Whether the user is a creator
+    #[serde(default)]
+    pub creator: Option<bool>,
+    /// Whether the user is a moderator
+    #[serde(rename = "mod", default)]
+    pub is_mod: Option<bool>,
+}
+
 /// Closed position from Data API (for PnL calculation)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClosedPosition {
