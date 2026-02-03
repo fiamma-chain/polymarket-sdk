@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-02-03
+
+### Fixed
+
+- **get_markets_by_condition_ids** - Fixed query parameter name from `condition_id` to `condition_ids` to match official Polymarket Gamma API specification
+
 ## [0.1.7] - 2025-01-13
 
 ### Added

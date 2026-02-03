@@ -439,12 +439,12 @@ impl GammaClient {
             return Ok(vec![]);
         }
 
-        // Build URL with repeated condition_id params (condition_id=...&condition_id=...)
+        // Build URL with repeated condition_ids params (condition_ids=...&condition_ids=...)
         let mut url = Url::parse(&format!("{}/markets", self.config.base_url))?;
         {
             let mut pairs = url.query_pairs_mut();
             for condition_id in condition_ids {
-                pairs.append_pair("condition_id", condition_id);
+                pairs.append_pair("condition_ids", condition_id);
             }
         }
 
