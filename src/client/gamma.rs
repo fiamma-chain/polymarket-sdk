@@ -446,6 +446,9 @@ impl GammaClient {
             for condition_id in condition_ids {
                 pairs.append_pair("condition_ids", condition_id);
             }
+            // IMPORTANT: Add limit parameter to override default pagination (20)
+            // Set limit to match the number of requested condition_ids
+            pairs.append_pair("limit", &condition_ids.len().to_string());
         }
 
         let url_str = url.to_string();

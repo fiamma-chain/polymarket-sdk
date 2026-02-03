@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-02-03
+
+### Fixed
+
+- **get_markets_by_condition_ids** - Add `limit` parameter to override Gamma API's default pagination limit (20). Now correctly returns all requested markets when querying by condition_ids.
+
 ## [0.1.10] - 2026-02-03
 
 ### Fixed
