@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-02-11
+
+### Fixed
+
+- **cancel_order** (NEW) - Add single order cancel method using correct `DELETE /order` endpoint with `{"orderID": "0x..."}` body format (previously SDK only had batch cancel which sent wrong body format)
+- **cancel_orders** - Fix batch cancel to use correct `DELETE /orders` endpoint (was `/order`) with raw JSON array body `["0x...", ...]` (was `{"orderIds": [...]}` which Polymarket API does not recognize)
+- **cancel_all_orders** - Fix endpoint path from `/order/cancel-all` to `/cancel-all` to match official Polymarket API
+- **CancelResponse** - Fix `not_canceled` field type from `Option<Vec<String>>` to `HashMap<String, String>` to match API response format (order_id -> reason map)
+
+### Added
+
+- **cancel_market_orders** - New method to cancel all orders for a specific market/asset using `DELETE /cancel-market-orders` endpoint
+- **cancel_order** - New method for cancelling a single order (previously only batch cancel was available)
+
 ## [0.1.11] - 2026-02-03
 
 ### Fixed

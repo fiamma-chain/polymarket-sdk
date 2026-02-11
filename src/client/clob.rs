@@ -254,21 +254,28 @@ impl OpenOrder {
     }
 }
 
-/// Cancel orders request
+/// Cancel single order request (DELETE /order)
+///
+/// Polymarket API expects: `{"orderID": "0x..."}`
 #[derive(Debug, Serialize)]
-struct CancelOrdersRequest {
-    /// Order IDs to cancel
-    #[serde(rename = "orderIds")]
-    order_ids: Vec<String>,
+struct CancelOrderRequest {
+    /// Order ID to cancel
+    #[serde(rename = "orderID")]
+    order_id: String,
 }
 
-/// Cancel response
+/// Cancel response from Polymarket CLOB API
+///
+/// Used by all cancel endpoints (single, batch, cancel-all, cancel-market-orders).
+/// The `not_canceled` field is a map of order_id -> reason explaining why an order
+/// couldn't be canceled.
 #[derive(Debug, Deserialize)]
 pub struct CancelResponse {
-    /// Cancelled order IDs
+    /// Successfully cancelled order IDs
     pub canceled: Vec<String>,
-    /// Failed cancellations
-    pub failed: Option<Vec<String>>,
+    /// Map of order_id -> reason for orders that couldn't be canceled
+    #[serde(default)]
+    pub not_canceled: HashMap<String, String>,
 }
 
 /// Neg risk response from /neg-risk endpoint
@@ -1148,19 +1155,34 @@ impl ClobClient {
         Ok(paginated.data)
     }
 
-    /// Cancel orders by IDs
+    /// Cancel a single order by ID
+    ///
+    /// Sends `DELETE /order` with body `{"orderID": "0x..."}`.
+    ///
+    /// Reference: <https://docs.polymarket.com/developers/CLOB/orders/cancel-orders#cancel-an-single-order>
+    ///
+    /// # Arguments
+    /// * `order_id` - The order hash/ID to cancel
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let resp = client.cancel_order("0x38a73eed...").await?;
+    /// println!("Canceled: {:?}", resp.canceled);
+    /// ```
     #[instrument(skip(self))]
-    pub async fn cancel_orders(&self, order_ids: Vec<String>) -> Result<CancelResponse> {
+    pub async fn cancel_order(&self, order_id: &str) -> Result<CancelResponse> {
         self.wait_for_rate_limit().await;
 
         let api_creds = self.api_credentials.as_ref().ok_or_else(|| {
-            PolymarketError::config("API credentials required for cancelling orders")
+            PolymarketError::config("API credentials required for cancelling order")
         })?;
 
         let endpoint = "/order";
         let url = format!("{}{}", self.config.base_url, endpoint);
 
-        let body = CancelOrdersRequest { order_ids };
+        let body = CancelOrderRequest {
+            order_id: order_id.to_string(),
+        };
 
         // Use auth_address for L2 authentication (supports Builder API scenarios)
         // Serialize body once to ensure consistent HMAC calculation
@@ -1172,7 +1194,76 @@ impl ClobClient {
             &address, api_creds, "DELETE", endpoint, &body_str, timestamp,
         )?;
 
-        debug!("Cancelling orders");
+        debug!(order_id = %order_id, "Cancelling single order");
+
+        let mut req_builder = self
+            .client
+            .delete(&url)
+            .header("Content-Type", "application/json")
+            .body(body_str);
+        for (key, value) in &headers {
+            req_builder = req_builder.header(*key, value);
+        }
+
+        let response = req_builder.send().await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(PolymarketError::api(status.as_u16(), body));
+        }
+
+        let result: CancelResponse = response.json().await.map_err(|e| {
+            PolymarketError::parse_with_source(format!("Failed to parse cancel response: {e}"), e)
+        })?;
+
+        info!(order_id = %order_id, cancelled = ?result.canceled, "Order cancelled");
+
+        Ok(result)
+    }
+
+    /// Cancel multiple orders by IDs
+    ///
+    /// Sends `DELETE /orders` with body `["0x...", "0x..."]` (pure JSON array).
+    ///
+    /// Reference: <https://docs.polymarket.com/developers/CLOB/orders/cancel-orders#cancel-multiple-orders>
+    ///
+    /// # Arguments
+    /// * `order_ids` - List of order hashes/IDs to cancel
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let resp = client.cancel_orders(vec![
+    ///     "0x38a73eed...".to_string(),
+    ///     "0xaaaa...".to_string(),
+    /// ]).await?;
+    /// println!("Canceled: {:?}", resp.canceled);
+    /// ```
+    #[instrument(skip(self))]
+    pub async fn cancel_orders(&self, order_ids: Vec<String>) -> Result<CancelResponse> {
+        self.wait_for_rate_limit().await;
+
+        let api_creds = self.api_credentials.as_ref().ok_or_else(|| {
+            PolymarketError::config("API credentials required for cancelling orders")
+        })?;
+
+        // NOTE: Batch cancel uses /orders (plural), not /order
+        let endpoint = "/orders";
+        let url = format!("{}{}", self.config.base_url, endpoint);
+
+        // Polymarket expects a raw JSON array: ["0x...", "0x..."]
+        // NOT an object like {"orderIds": [...]}
+        let body_str = serde_json::to_string(&order_ids)
+            .map_err(|e| PolymarketError::parse(format!("Failed to serialize: {}", e)))?;
+
+        // Use auth_address for L2 authentication (supports Builder API scenarios)
+        let address = self.get_auth_address();
+        let timestamp = get_current_unix_time_secs();
+        let headers = create_l2_headers_with_body_string(
+            &address, api_creds, "DELETE", endpoint, &body_str, timestamp,
+        )?;
+
+        debug!(count = order_ids.len(), "Cancelling multiple orders");
 
         let mut req_builder = self
             .client
@@ -1201,6 +1292,16 @@ impl ClobClient {
     }
 
     /// Cancel all open orders
+    ///
+    /// Sends `DELETE /cancel-all` with no body.
+    ///
+    /// Reference: <https://docs.polymarket.com/developers/CLOB/orders/cancel-orders#cancel-all-orders>
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// let resp = client.cancel_all_orders().await?;
+    /// println!("Canceled: {:?}", resp.canceled);
+    /// ```
     #[instrument(skip(self))]
     pub async fn cancel_all_orders(&self) -> Result<CancelResponse> {
         self.wait_for_rate_limit().await;
@@ -1209,7 +1310,7 @@ impl ClobClient {
             PolymarketError::config("API credentials required for cancelling orders")
         })?;
 
-        let endpoint = "/order/cancel-all";
+        let endpoint = "/cancel-all";
         let url = format!("{}{}", self.config.base_url, endpoint);
 
         // Use auth_address for L2 authentication (supports Builder API scenarios)
@@ -1238,6 +1339,98 @@ impl ClobClient {
         })?;
 
         info!(cancelled = ?result.canceled, "All orders cancelled");
+
+        Ok(result)
+    }
+
+    /// Cancel orders for a specific market
+    ///
+    /// Sends `DELETE /cancel-market-orders` with body `{"market": "...", "asset_id": "..."}`.
+    /// At least one of `market` (condition_id) or `asset_id` (token_id) should be provided.
+    ///
+    /// Reference: <https://docs.polymarket.com/developers/CLOB/orders/cancel-orders#cancel-orders-from-market>
+    ///
+    /// # Arguments
+    /// * `market` - Optional condition ID of the market
+    /// * `asset_id` - Optional token/asset ID
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// // Cancel all orders for a specific market
+    /// let resp = client.cancel_market_orders(
+    ///     Some("0xbd31dc8a..."),
+    ///     None,
+    /// ).await?;
+    ///
+    /// // Cancel all orders for a specific asset
+    /// let resp = client.cancel_market_orders(
+    ///     None,
+    ///     Some("52114319501245915516055106046884209969926127482827954674443846427813813222426"),
+    /// ).await?;
+    /// ```
+    #[instrument(skip(self))]
+    pub async fn cancel_market_orders(
+        &self,
+        market: Option<&str>,
+        asset_id: Option<&str>,
+    ) -> Result<CancelResponse> {
+        self.wait_for_rate_limit().await;
+
+        let api_creds = self.api_credentials.as_ref().ok_or_else(|| {
+            PolymarketError::config("API credentials required for cancelling market orders")
+        })?;
+
+        let endpoint = "/cancel-market-orders";
+        let url = format!("{}{}", self.config.base_url, endpoint);
+
+        // Build the body with optional fields
+        let mut body_map = serde_json::Map::new();
+        if let Some(m) = market {
+            body_map.insert(
+                "market".to_string(),
+                serde_json::Value::String(m.to_string()),
+            );
+        }
+        if let Some(a) = asset_id {
+            body_map.insert(
+                "asset_id".to_string(),
+                serde_json::Value::String(a.to_string()),
+            );
+        }
+        let body_str = serde_json::to_string(&body_map)
+            .map_err(|e| PolymarketError::parse(format!("Failed to serialize: {}", e)))?;
+
+        // Use auth_address for L2 authentication (supports Builder API scenarios)
+        let address = self.get_auth_address();
+        let timestamp = get_current_unix_time_secs();
+        let headers = create_l2_headers_with_body_string(
+            &address, api_creds, "DELETE", endpoint, &body_str, timestamp,
+        )?;
+
+        debug!(market = ?market, asset_id = ?asset_id, "Cancelling market orders");
+
+        let mut req_builder = self
+            .client
+            .delete(&url)
+            .header("Content-Type", "application/json")
+            .body(body_str);
+        for (key, value) in &headers {
+            req_builder = req_builder.header(*key, value);
+        }
+
+        let response = req_builder.send().await?;
+        let status = response.status();
+
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(PolymarketError::api(status.as_u16(), body));
+        }
+
+        let result: CancelResponse = response.json().await.map_err(|e| {
+            PolymarketError::parse_with_source(format!("Failed to parse cancel response: {e}"), e)
+        })?;
+
+        info!(market = ?market, asset_id = ?asset_id, cancelled = ?result.canceled, "Market orders cancelled");
 
         Ok(result)
     }

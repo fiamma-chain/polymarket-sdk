@@ -123,8 +123,10 @@ fn show_concepts_only() {
     println!("5. Key Methods:");
     println!("   - clob.get_open_orders()");
     println!("   - clob.submit_order(&signed_order)");
-    println!("   - clob.cancel_orders(order_ids)");
-    println!("   - clob.cancel_all_orders()");
+    println!("   - clob.cancel_order(order_id)       // Cancel single order");
+    println!("   - clob.cancel_orders(order_ids)      // Cancel multiple orders");
+    println!("   - clob.cancel_all_orders()            // Cancel all orders");
+    println!("   - clob.cancel_market_orders(market, asset_id)  // Cancel by market");
     println!();
     println!("Set POLY_PRIVATE_KEY to run the full example.");
 }
