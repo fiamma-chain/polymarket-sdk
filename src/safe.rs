@@ -42,7 +42,7 @@ use sha2::Sha256;
 use tracing::{debug, info, instrument, warn};
 
 use crate::core::{data_api_url, relayer_api_url};
-use crate::core::{PolymarketError, Result};
+use crate::core::{sanitize_error_body, PolymarketError, Result};
 
 type RateLimiter = GovRateLimiter<
     governor::state::NotKeyed,
@@ -1444,21 +1444,23 @@ impl RelayerClient {
         let status = response.status();
         let response_body = response.text().await.unwrap_or_default();
 
-        debug!(status = %status, response = %response_body, "Relayer response received");
+        let sanitized = sanitize_error_body(status.as_u16(), &response_body);
+        debug!(status = %status, response = %sanitized, "Relayer response received");
 
         if !status.is_success() {
             warn!(
                 status = %status,
                 endpoint = %endpoint,
-                body = %response_body,
+                body = %sanitized,
                 "Relayer SafeCreate request failed"
             );
             return Err(PolymarketError::api(status.as_u16(), response_body));
         }
 
         let result: DeploySafeResponse = serde_json::from_str(&response_body).map_err(|e| {
+            let body_preview = sanitize_error_body(0, &response_body);
             PolymarketError::parse_with_source(
-                format!("Failed to parse Relayer response: {e}. Body: {response_body}"),
+                format!("Failed to parse Relayer response: {e}. Body: {body_preview}"),
                 e,
             )
         })?;
@@ -1493,7 +1495,8 @@ impl RelayerClient {
 
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            warn!(status = %status.as_u16(), response_body = %body, "Data API profile query failed");
+            let sanitized = sanitize_error_body(status.as_u16(), &body);
+            warn!(status = %status.as_u16(), response_body = %sanitized, "Data API profile query failed");
             return Ok(None);
         }
 
@@ -1687,16 +1690,18 @@ impl RelayerClient {
         let status = response.status();
         let response_body = response.text().await.unwrap_or_default();
 
-        debug!(status = %status, response = %response_body, "Relayer /submit response");
+        let sanitized = sanitize_error_body(status.as_u16(), &response_body);
+        debug!(status = %status, response = %sanitized, "Relayer /submit response");
 
         if !status.is_success() {
-            warn!(status = %status, endpoint = %endpoint, body = %response_body, "Relayer /submit failed");
+            warn!(status = %status, endpoint = %endpoint, body = %sanitized, "Relayer /submit failed");
             return Err(PolymarketError::api(status.as_u16(), response_body));
         }
 
         let receipt: TransactionReceipt = serde_json::from_str(&response_body).map_err(|e| {
+            let body_preview = sanitize_error_body(0, &response_body);
             PolymarketError::parse_with_source(
-                format!("Failed to parse receipt: {e}. Body: {response_body}"),
+                format!("Failed to parse receipt: {e}. Body: {body_preview}"),
                 e,
             )
         })?;
@@ -1744,7 +1749,8 @@ impl RelayerClient {
 
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            warn!(status = %status, url = %url, body = %body, "Relayer /submit request failed");
+            let sanitized = sanitize_error_body(status.as_u16(), &body);
+            warn!(status = %status, url = %url, body = %sanitized, "Relayer /submit request failed");
             return Err(PolymarketError::api(status.as_u16(), body));
         }
 

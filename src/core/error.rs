@@ -247,6 +247,36 @@ impl PolymarketError {
     }
 }
 
+/// Sanitize an HTTP error response body for logging.
+///
+/// Replaces HTML error pages (e.g., Cloudflare 502/503 pages) with a concise summary,
+/// and truncates overly long non-HTML responses.
+pub fn sanitize_error_body(status: u16, body: &str) -> String {
+    let trimmed = body.trim();
+
+    if trimmed.is_empty() {
+        return format!("[empty response] (status {status})");
+    }
+
+    if trimmed.starts_with("<!") || trimmed.starts_with("<html") || trimmed.contains("<html") {
+        return format!(
+            "[HTML error page removed] (status {status}, {} bytes)",
+            body.len()
+        );
+    }
+
+    const MAX_LEN: usize = 500;
+    if trimmed.len() > MAX_LEN {
+        return format!(
+            "{}... ({} bytes total)",
+            &trimmed[..MAX_LEN],
+            trimmed.len()
+        );
+    }
+
+    trimmed.to_string()
+}
+
 // Convenience constructors
 impl PolymarketError {
     /// Create a network error with source.
@@ -269,10 +299,14 @@ impl PolymarketError {
     }
 
     /// Create an API error.
+    ///
+    /// The response body is automatically sanitized: HTML error pages are replaced
+    /// with a concise summary, and overly long bodies are truncated.
     pub fn api(status: u16, message: impl Into<String>) -> Self {
+        let raw = message.into();
         Self::Api {
             status,
-            message: message.into(),
+            message: sanitize_error_body(status, &raw),
             error_code: None,
         }
     }
